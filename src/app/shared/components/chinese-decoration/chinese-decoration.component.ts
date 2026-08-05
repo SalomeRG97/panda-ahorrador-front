@@ -19,7 +19,7 @@ import { CommonModule } from '@angular/common';
     .decor-container {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      pointer-events: none;
+      pointer-events: none !important;
       z-index: 999;
       overflow: hidden;
     }
@@ -30,6 +30,8 @@ import { CommonModule } from '@angular/common';
       animation: floatLantern 4s ease-in-out infinite alternate;
       filter: drop-shadow(0 4px 8px rgba(212, 86, 106, 0.2));
       opacity: 0.85;
+      pointer-events: none !important;
+      user-select: none;
     }
     .lantern-left { left: 15px; }
     .lantern-right { right: 15px; animation-delay: 2s; }
@@ -40,6 +42,8 @@ import { CommonModule } from '@angular/common';
       font-size: 1.2rem;
       opacity: 0.7;
       animation: fallSakura 12s linear infinite;
+      pointer-events: none !important;
+      user-select: none;
     }
     .petal1 { left: 10%; animation-duration: 14s; animation-delay: 0s; }
     .petal2 { left: 35%; animation-duration: 10s; animation-delay: 3s; }

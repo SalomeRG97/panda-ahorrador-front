@@ -50,7 +50,7 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
           <h3>Calendario de Gastos Presupuestados</h3>
           <p class="subtitle">Haz clic en cualquier día para programar un gasto o ver sus detalles.</p>
           <div class="weeks-shortcut">
-            <span>Acceso rápido a Semanas:</span>
+            <span>Acceso a Semanas:</span>
             <a *ngFor="let w of monthDetails.weeks" [routerLink]="['/years', yearId, 'months', monthId, 'weeks', w.id]" class="week-pill">
               Semana {{ w.week_number }}
             </a>
@@ -58,28 +58,30 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
         </div>
 
         <!-- GRID DEL CALENDARIO -->
-        <div class="calendar-grid">
-          <div class="day-name">Dom</div>
-          <div class="day-name">Lun</div>
-          <div class="day-name">Mar</div>
-          <div class="day-name">Mié</div>
-          <div class="day-name">Jue</div>
-          <div class="day-name">Vie</div>
-          <div class="day-name">Sáb</div>
+        <div class="calendar-grid-wrapper">
+          <div class="calendar-grid">
+            <div class="day-name">Dom</div>
+            <div class="day-name">Lun</div>
+            <div class="day-name">Mar</div>
+            <div class="day-name">Mié</div>
+            <div class="day-name">Jue</div>
+            <div class="day-name">Vie</div>
+            <div class="day-name">Sáb</div>
 
-          <div *ngFor="let dayCell of calendarDays" 
-               class="calendar-day-cell" 
-               [class.empty-day]="!dayCell.dateStr"
-               (click)="dayCell.dateStr && openExpenseModal(dayCell.dateStr)">
-            <div class="day-number" *ngIf="dayCell.dayNumber">{{ dayCell.dayNumber }}</div>
-            <div class="day-expenses">
-              <div *ngFor="let exp of dayCell.expenses" 
-                   class="expense-tag" 
-                   [style.backgroundColor]="exp.category_color"
-                   (click)="$event.stopPropagation(); openDetailPopup(exp)">
-                <span class="exp-icon">{{ exp.category_icon }}</span>
-                <span class="exp-concept">{{ exp.concept }}</span>
-                <span class="exp-amount">$ {{ exp.budget_amount | number:'1.0-0' }}</span>
+            <div *ngFor="let dayCell of calendarDays" 
+                 class="calendar-day-cell" 
+                 [class.empty-day]="!dayCell.dateStr"
+                 (click)="dayCell.dateStr && openExpenseModal(dayCell.dateStr)">
+              <div class="day-number" *ngIf="dayCell.dayNumber">{{ dayCell.dayNumber }}</div>
+              <div class="day-expenses">
+                <div *ngFor="let exp of dayCell.expenses" 
+                     class="expense-tag" 
+                     [style.backgroundColor]="exp.category_color"
+                     (click)="$event.stopPropagation(); openDetailPopup(exp)">
+                  <span class="exp-icon">{{ exp.category_icon }}</span>
+                  <span class="exp-concept">{{ exp.concept }}</span>
+                  <span class="exp-amount">$ {{ exp.budget_amount | number:'1.0-0' }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -98,29 +100,31 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
               </button>
             </div>
 
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Concepto</th>
-                  <th>Valor</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let inc of monthDetails.incomes">
-                  <td>{{ inc.date }}</td>
-                  <td><strong>{{ inc.concept }}</strong></td>
-                  <td class="text-green">$ {{ inc.amount | number:'1.2-2' }}</td>
-                  <td>
-                    <button (click)="deleteIncome(inc.id!)" class="btn-icon-danger"><i class="fa-solid fa-trash"></i></button>
-                  </td>
-                </tr>
-                <tr *ngIf="monthDetails.incomes.length === 0">
-                  <td colspan="4" class="text-center">No has registrado ingresos aún.</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Concepto</th>
+                    <th>Valor</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let inc of monthDetails.incomes">
+                    <td>{{ inc.date }}</td>
+                    <td><strong>{{ inc.concept }}</strong></td>
+                    <td class="text-green">$ {{ inc.amount | number:'1.2-2' }}</td>
+                    <td>
+                      <button (click)="deleteIncome(inc.id!)" class="btn-icon-danger"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="monthDetails.incomes.length === 0">
+                    <td colspan="4" class="text-center">No has registrado ingresos aún.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- SECCIÓN AHORRO DEL MES -->
@@ -198,7 +202,7 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
         <!-- BARRA DE PROGRESO -->
         <div class="progress-bar-wrapper">
           <div class="progress-text">
-            <span>Progreso del Reto: {{ challengeData.stats.completedDays }} de {{ challengeData.stats.totalDays }} días</span>
+            <span>Progreso: {{ challengeData.stats.completedDays }} de {{ challengeData.stats.totalDays }} días</span>
             <strong>{{ challengeData.stats.percentage }}%</strong>
           </div>
           <div class="progress-track">
@@ -213,7 +217,7 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
                [class.completed]="day.completed"
                (click)="toggleChallengeDay(day)">
             <span class="day-num">Día {{ day.day }}</span>
-            <span class="check-icon">{{ day.completed ? '🌸 Done' : '⚪' }}</span>
+            <span class="check-icon">{{ day.completed ? '🌸 Listo' : '⚪' }}</span>
           </div>
         </div>
       </div>
@@ -307,65 +311,74 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
   styles: [`
     .month-container {
       max-width: 1200px;
-      margin: 30px auto;
-      padding: 0 20px;
+      margin: 20px auto;
+      padding: 0 16px;
     }
     .month-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
     .tab-content {
-      padding: 24px;
+      padding: clamp(14px, 3vw, 24px);
     }
     .calendar-header-actions {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     .weeks-shortcut {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
-      margin-top: 10px;
+      margin-top: 8px;
     }
     .week-pill {
       background: #FFF0F4;
       border: 1px solid #F4A6C1;
       color: #D4566A;
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 20px;
       text-decoration: none;
       font-weight: 700;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       transition: all 0.2s ease;
     }
     .week-pill:hover {
       background: #D4566A;
       color: white;
     }
-    /* CALENDARIO */
+    /* CALENDARIO RESPONSIVO */
+    .calendar-grid-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
     .calendar-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(7, minmax(80px, 1fr));
+      gap: 6px;
+      min-width: 580px;
     }
     .day-name {
       text-align: center;
       font-weight: 700;
       color: #4A3F55;
-      padding: 8px;
+      padding: 6px;
       background: #FFF0F4;
       border-radius: 8px;
+      font-size: 0.85rem;
     }
     .calendar-day-cell {
-      min-height: 100px;
+      min-height: 90px;
       background: #FFFFFF;
       border: 1px solid rgba(244, 166, 193, 0.4);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 6px;
       cursor: pointer;
       display: flex;
@@ -384,7 +397,7 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
     }
     .day-number {
       font-weight: 700;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #4A3F55;
     }
     .day-expenses {
@@ -393,14 +406,14 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
       gap: 4px;
     }
     .expense-tag {
-      padding: 4px 6px;
+      padding: 3px 5px;
       border-radius: 6px;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
       color: #333;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -411,21 +424,24 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
     .incomes-layout {
       display: grid;
       grid-template-columns: 2fr 1fr;
-      gap: 24px;
+      gap: 20px;
     }
     .section-title-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
     .data-table {
       width: 100%;
       border-collapse: collapse;
     }
     .data-table th, .data-table td {
-      padding: 12px;
+      padding: 10px;
       border-bottom: 1px solid #FFF0F4;
+      font-size: 0.9rem;
     }
     .data-table th {
       text-align: left;
@@ -437,50 +453,56 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
-    .savings-icon { font-size: 3rem; }
+    .savings-icon { font-size: 2.5rem; }
     .saving-input-group {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      width: 100%;
     }
-    .currency-symbol { font-weight: 700; font-size: 1.2rem; }
+    .currency-symbol { font-weight: 700; font-size: 1.1rem; }
 
     /* RESUMEN TOTALES */
     .totals-summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-top: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
     }
     .total-box {
-      padding: 16px;
-      border-radius: 16px;
+      padding: 14px;
+      border-radius: 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      font-size: 0.9rem;
     }
+    .bg-ingresos { background: #EAF6F0; color: #1E4E36; }
+    .bg-gastos { background: #FDEEF4; color: #6A1B3B; }
+    .bg-ahorros { background: #FFF9EB; color: #5B4810; }
 
     /* RETOS */
     .challenge-header {
       display: flex;
       align-items: center;
-      gap: 20px;
-      margin-bottom: 24px;
+      gap: 16px;
+      margin-bottom: 20px;
     }
-    .challenge-icon-big { font-size: 3.5rem; }
+    .challenge-icon-big { font-size: 3rem; }
     .progress-bar-wrapper {
-      margin-bottom: 30px;
+      margin-bottom: 24px;
     }
     .progress-text {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
     }
     .progress-track {
-      height: 16px;
+      height: 14px;
       background: #FFF0F4;
       border-radius: 10px;
       overflow: hidden;
@@ -492,46 +514,34 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
     }
     .challenge-days-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+      gap: 10px;
     }
     .challenge-day-card {
       background: #FFFFFF;
       border: 2px solid #F4A6C1;
-      border-radius: 12px;
-      padding: 12px;
+      border-radius: 10px;
+      padding: 8px;
       text-align: center;
       cursor: pointer;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
       transition: all 0.2s ease;
+      font-size: 0.8rem;
     }
     .challenge-day-card.completed {
       background: #FFE5EC;
       border-color: #D4566A;
-      transform: scale(1.05);
+      transform: scale(1.03);
     }
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      padding: 20px;
-    }
-    .modal-card { width: 100%; max-width: 450px; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .close-btn { background: none; border: none; font-size: 1.6rem; cursor: pointer; }
-    .form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px; }
-    .form-input { padding: 10px; border-radius: 10px; border: 1.5px solid #F4A6C1; outline: none; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
-    .btn-icon-danger { background: none; border: none; color: #D4566A; cursor: pointer; font-size: 1.1rem; }
-    @media (max-width: 768px) {
+    .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+    .form-input { padding: 8px 12px; border-radius: 10px; border: 1.5px solid #F4A6C1; outline: none; font-size: 0.9rem; width: 100%; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+    .btn-icon-danger { background: none; border: none; color: #D4566A; cursor: pointer; font-size: 1rem; }
+    
+    @media (max-width: 900px) {
       .incomes-layout { grid-template-columns: 1fr; }
-      .calendar-grid { grid-template-columns: repeat(2, 1fr); }
     }
   `]
 })
