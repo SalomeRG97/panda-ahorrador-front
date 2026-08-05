@@ -17,7 +17,6 @@ import { ChineseDecorationComponent } from './shared/components/chinese-decorati
       <footer class="app-footer">
         <div class="footer-container">
           <span>🌸 熊猫理财 El panda ahorrador &copy; {{ currentYear }}</span>
-          <span>Diseñado con tonalidades pasteles y armonía oriental</span>
         </div>
       </footer>
     </div>
@@ -44,10 +43,8 @@ import { ChineseDecorationComponent } from './shared/components/chinese-decorati
       max-width: 1200px;
       margin: 0 auto;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
     }
   `]
 })

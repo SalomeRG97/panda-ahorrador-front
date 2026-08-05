@@ -28,7 +28,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   `,
   styles: [`
     .navbar-header {
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(10px);
       border-bottom: 2px solid #F4A6C1;
       position: sticky;
@@ -47,18 +47,19 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
     .brand-link {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       text-decoration: none;
     }
     .brand-logo {
-      width: 48px;
-      height: 48px;
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(212, 86, 106, 0.2);
+      object-fit: cover;
       transition: transform 0.3s ease;
     }
     .brand-link:hover .brand-logo {
-      transform: rotate(10deg) scale(1.05);
+      transform: rotate(10deg) scale(1.08);
     }
     .brand-title {
       display: flex;
@@ -66,7 +67,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
     }
     .chinese-name {
       font-family: 'Caveat', cursive;
-      font-size: 1.6rem;
+      font-size: 1.7rem;
       font-weight: 700;
       color: #D4566A;
       line-height: 1;
