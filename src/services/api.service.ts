@@ -8,6 +8,7 @@ import {
   ExtraExpense,
   Week,
   CategoryWeekTotal,
+  PaymentMethodWeekTotal,
   MonthChallengeData,
   AnnualSummary,
   CategoryChartData,
@@ -127,7 +128,13 @@ export const ApiService = {
     return res.data.data;
   },
 
-  async getWeekDetail(weekId: number): Promise<{ week: Week; budgetExpenses: BudgetExpense[]; extraExpenses: ExtraExpense[]; categoryTotals: CategoryWeekTotal[] }> {
+  async getWeekDetail(weekId: number): Promise<{
+    week: Week;
+    budgetExpenses: BudgetExpense[];
+    extraExpenses: ExtraExpense[];
+    categoryTotals: CategoryWeekTotal[];
+    paymentMethodTotals: PaymentMethodWeekTotal[];
+  }> {
     const res = await api.get<{ success: boolean; data: any }>(`/weeks/${weekId}`);
     return res.data.data;
   },

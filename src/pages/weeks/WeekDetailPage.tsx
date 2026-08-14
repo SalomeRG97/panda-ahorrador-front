@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ApiService } from '../../services/api.service';
 import { useToast } from '../../context/ToastContext';
-import { Category, BudgetExpense, ExtraExpense, CategoryWeekTotal, Week } from '../../types';
+import { Category, BudgetExpense, ExtraExpense, CategoryWeekTotal, PaymentMethodWeekTotal, Week } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 
 export const WeekDetailPage: React.FC = () => {
@@ -18,6 +18,7 @@ export const WeekDetailPage: React.FC = () => {
     budgetExpenses: BudgetExpense[];
     extraExpenses: ExtraExpense[];
     categoryTotals: CategoryWeekTotal[];
+    paymentMethodTotals: PaymentMethodWeekTotal[];
   } | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -507,6 +508,43 @@ export const WeekDetailPage: React.FC = () => {
         </div>
       </section>
 
+      {/* SECCIÓN 4: TOTALES GASTADOS POR MEDIO DE PAGO AL FINAL DE LA SEMANA */}
+      <section className="card-pastel section-box">
+        <div className="chinese-title-wrapper">
+          <h2>💳 Totales Gastados por Medio de Pago (Semana {weekData.week.week_number})</h2>
+        </div>
+
+        <div className="payment-totals-grid">
+          {weekData.paymentMethodTotals?.map((pmTotal) => (
+            <div
+              key={pmTotal.paymentMethod}
+              className="payment-total-card"
+            >
+              <div className="pm-card-header">
+                <span className="pm-icon">💳</span>
+                <span className="pm-name">{pmTotal.paymentMethod}</span>
+              </div>
+              <div className="pm-card-body">
+                {pmTotal.totalBudget > 0 && (
+                  <span>Presupuestado: {formatCurrency(pmTotal.totalBudget)}</span>
+                )}
+                <strong>Real Gastado: {formatCurrency(pmTotal.totalSpent)}</strong>
+                {(pmTotal.totalRealBudget > 0 || pmTotal.totalExtra > 0) && (
+                  <span className="pm-breakdown">
+                    (Presup. Real: {formatCurrency(pmTotal.totalRealBudget)} | Extra: {formatCurrency(pmTotal.totalExtra)})
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+          {(!weekData.paymentMethodTotals || weekData.paymentMethodTotals.length === 0) && (
+            <p className="text-center" style={{ color: '#8C7B99', fontStyle: 'italic', gridColumn: '1 / -1' }}>
+              No hay consumos registrados por medio de pago en esta semana.
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* MODAL CREAR GASTO EXTRA */}
       {showExtraModal && (
         <div className="modal-overlay" onClick={() => setShowExtraModal(false)}>
@@ -688,6 +726,41 @@ export const WeekDetailPage: React.FC = () => {
           flex-direction: column;
           font-size: 0.85rem;
         }
+        .payment-totals-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+          gap: 16px;
+        }
+        .payment-total-card {
+          padding: 16px;
+          border-radius: 16px;
+          background: #FFF0F4;
+          border: 1.5px solid #F4A6C1;
+          color: #4A3F55;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .pm-card-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 700;
+          font-size: 1.05rem;
+          color: #D4566A;
+        }
+        .pm-card-body {
+          display: flex;
+          flex-direction: column;
+          font-size: 0.88rem;
+          gap: 4px;
+        }
+        .pm-breakdown {
+          font-size: 0.78rem;
+          color: #8C7B99;
+          margin-top: 2px;
+        }
         .modal-overlay {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
@@ -710,8 +783,8 @@ export const WeekDetailPage: React.FC = () => {
           .week-header { flex-direction: column; text-align: center; }
           .header-nav-actions { justify-content: center; width: 100%; }
           .section-header { flex-direction: column; text-align: center; gap: 10px; }
-          .category-totals-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-          .category-total-card { padding: 12px; }
+          .category-totals-grid, .payment-totals-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+          .category-total-card, .payment-total-card { padding: 12px; }
         }
       `}</style>
     </div>

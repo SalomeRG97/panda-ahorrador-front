@@ -138,6 +138,14 @@ export interface CategoryWeekTotal {
   totalSpent: number;
 }
 
+export interface PaymentMethodWeekTotal {
+  paymentMethod: string;
+  totalBudget: number;
+  totalRealBudget: number;
+  totalExtra: number;
+  totalSpent: number;
+}
+
 export interface Challenge {
   id: number;
   title: string;
