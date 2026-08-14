@@ -3,6 +3,8 @@ import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { User } from '../../types';
 
+import { getAvatarUrl } from '../../config/environment';
+
 export const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -29,13 +31,6 @@ export const UserManagementPage: React.FC = () => {
   useEffect(() => {
     loadUsers();
   }, []);
-
-  const getAvatarUrl = (avatar?: string | null): string => {
-    if (avatar) {
-      return avatar.startsWith('http') ? avatar : `http://localhost:3000${avatar}`;
-    }
-    return '/logo.png';
-  };
 
   const openCreateModal = () => {
     setIsEditing(false);

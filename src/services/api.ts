@@ -1,9 +1,8 @@
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { API_BASE_URL } from '../config/environment';
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
 });
 
 // Interceptor para agregar token JWT en las peticiones
@@ -28,7 +27,7 @@ api.interceptors.response.use(
       
       if (refreshToken) {
         try {
-          const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+          const res = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
           if (res.data?.success && res.data?.data) {
             const { accessToken, refreshToken: newRefreshToken, user } = res.data.data;
             localStorage.setItem('panda_access_token', accessToken);

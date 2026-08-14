@@ -1,19 +1,12 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getAvatarUrl } from '../../config/environment';
 
 export const Navbar: React.FC = () => {
   const { currentUser, isAuthenticated, hasRole, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const getAvatarUrl = (): string => {
-    const avatar = currentUser?.avatarUrl;
-    if (avatar) {
-      return avatar.startsWith('http') ? avatar : `http://localhost:3000${avatar}`;
-    }
-    return '/logo.png';
-  };
 
   const handleLogout = () => {
     setMobileMenuOpen(false);
@@ -75,7 +68,7 @@ export const Navbar: React.FC = () => {
             {/* Perfil del usuario autenticado */}
             <div className="user-profile-menu">
               <Link to="/settings" className="user-info-link" title="Ir a Configuración" onClick={closeMobileMenu}>
-                <img src={getAvatarUrl()} alt="User Avatar" className="user-avatar-img" />
+                <img src={getAvatarUrl(currentUser?.avatarUrl)} alt="User Avatar" className="user-avatar-img" />
                 <div className="user-details">
                   <span className="user-display-name">{currentUser?.name}</span>
                   <span className={`user-role-badge badge-${currentUser?.role}`}>

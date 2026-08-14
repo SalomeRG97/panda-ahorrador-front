@@ -5,6 +5,8 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { Category } from '../../types';
 
+import { getAvatarUrl } from '../../config/environment';
+
 export const SettingsPage: React.FC = () => {
   const { currentUser, reloadProfile } = useAuth();
   const { success, error, warning, confirm } = useToast();
@@ -42,14 +44,6 @@ export const SettingsPage: React.FC = () => {
 
   const loadCategories = () => {
     ApiService.getCategories().then(setCategories).catch(console.error);
-  };
-
-  const getAvatarUrl = (): string => {
-    const avatar = currentUser?.avatarUrl;
-    if (avatar) {
-      return avatar.startsWith('http') ? avatar : `http://localhost:3000${avatar}`;
-    }
-    return '/logo.png';
   };
 
   const getRoleIcon = (role?: string): string => {
@@ -203,7 +197,7 @@ export const SettingsPage: React.FC = () => {
           <div className="card-pastel avatar-card">
             <h3><i className="fa-solid fa-camera"></i> Foto de Perfil</h3>
             <div className="avatar-wrapper">
-              <img src={getAvatarUrl()} alt="Avatar" className="profile-avatar" />
+              <img src={getAvatarUrl(currentUser?.avatarUrl)} alt="Avatar" className="profile-avatar" />
               <div className="avatar-badge">
                 <i className={`fa-solid ${getRoleIcon(currentUser?.role)}`}></i> {currentUser?.role?.toUpperCase()}
               </div>

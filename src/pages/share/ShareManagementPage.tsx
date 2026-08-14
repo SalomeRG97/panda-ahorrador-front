@@ -5,6 +5,8 @@ import { AuthService } from '../../services/auth.service';
 import { EmailService } from '../../services/email.service';
 import { SharedOwner, SharedViewer } from '../../types';
 
+import { getAvatarUrl } from '../../config/environment';
+
 export const ShareManagementPage: React.FC = () => {
   const { currentUser, hasRole } = useAuth();
   const { success, error, confirm } = useToast();
@@ -34,13 +36,6 @@ export const ShareManagementPage: React.FC = () => {
       loadSharedWithMe();
     }
   }, []);
-
-  const getAvatarUrl = (avatar?: string | null): string => {
-    if (avatar) {
-      return avatar.startsWith('http') ? avatar : `http://localhost:3000${avatar}`;
-    }
-    return '/logo.png';
-  };
 
   const handleShare = async (e: React.FormEvent) => {
     e.preventDefault();
