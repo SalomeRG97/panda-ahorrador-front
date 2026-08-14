@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { User } from '../../../core/interfaces/auth.interface';
 import { ToastService } from '../../../shared/services/toast.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-user-management',
@@ -182,7 +183,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 export class UserManagementComponent implements OnInit {
   private http = inject(HttpClient);
   private toastService = inject(ToastService);
-  private apiUrl = 'http://localhost:3000/api/admin';
+  private apiUrl = `${environment.apiUrl}/admin`;
 
   users = signal<User[]>([]);
   showModal = signal(false);

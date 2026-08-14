@@ -128,79 +128,137 @@ import { SharedViewer, SharedOwner } from '../../../core/interfaces/auth.interfa
       margin-bottom: 16px;
       color: var(--text-dark);
       border-bottom: 2px solid #FFF0F4;
-      padding-bottom: 10px;
-    }
-    .share-form {
-      display: flex;
-      flex-direction: column;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .input-with-button {
-      display: flex;
-      gap: 10px;
-    }
-    .form-control {
-      flex: 1;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      border: 1.5px solid #F4A6C1;
-      background-color: #FFF0F4;
-      font-family: var(--font-body);
+      margin: 0.25rem 0 0 0;
+      color: #64748b;
       font-size: 0.9rem;
     }
-    .form-hint {
-      font-size: 0.8rem;
-      color: var(--text-muted);
+    .share-card {
+      background: var(--surface-card, #ffffff);
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color, #e2e8f0);
     }
-    .viewers-list {
-      list-style: none;
-      padding: 0;
+    .share-card h3 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+      color: var(--text-color, #1e293b);
+    }
+    .input-group {
       display: flex;
-      flex-direction: column;
-      gap: 12px;
+      gap: 0.75rem;
     }
-    .viewer-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background-color: #FFF0F4;
-      border-radius: var(--radius-md);
-      border: 1px solid rgba(244, 166, 193, 0.4);
+    .share-input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border-color, #cbd5e1);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
     }
-    .viewer-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .share-input:focus {
+      border-color: #6366f1;
     }
-    .avatar-small {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #F4A6C1;
-    }
-    .viewer-info .name {
+    .btn-share {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      border: none;
+      border-radius: 10px;
       font-weight: 600;
-      display: block;
-      color: var(--text-dark);
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
     }
-    .viewer-info .email {
-      font-size: 0.8rem;
-      color: var(--text-muted);
+    .btn-share:hover:not(:disabled) {
+      opacity: 0.95;
+      transform: translateY(-1px);
     }
-    .btn-sm {
-      padding: 6px 12px;
+    .btn-share:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .hint-text {
       font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+      margin-bottom: 0;
     }
     .empty-state {
+      text-align: center;
+      padding: 1.5rem;
+      color: #94a3b8;
+      background: #f8fafc;
+      border-radius: 10px;
       font-size: 0.9rem;
-      color: var(--text-muted);
-      font-style: italic;
+    }
+    .viewers-list, .owners-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .viewer-item, .owner-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid #f1f5f9;
+    }
+    .viewer-info, .owner-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .viewer-avatar, .owner-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #6366f1;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+    .viewer-info div, .owner-info div {
+      display: flex;
+      flex-direction: column;
+    }
+    .viewer-email, .owner-email {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+    .btn-revoke {
+      background: #fee2e2;
+      color: #ef4444;
+      border: none;
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-revoke:hover {
+      background: #fca5a5;
+    }
+    .btn-view {
+      background: #e0e7ff;
+      color: #4338ca;
+      border: none;
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-view:hover {
+      background: #c7d2fe;
     }
   `]
 })
@@ -209,7 +267,7 @@ export class ShareManagementComponent implements OnInit {
   private emailService = inject(EmailService);
   private toastService = inject(ToastService);
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/share';
+  private apiUrl = `${environment.apiUrl}/share`;
 
   viewerEmail = '';
   myViewers = signal<SharedViewer[]>([]);

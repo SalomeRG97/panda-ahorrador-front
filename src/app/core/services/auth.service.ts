@@ -5,13 +5,15 @@ import { Observable, tap, catchError, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { User, LoginRequest, RegisterRequest, AuthResponse } from '../interfaces/auth.interface';
 
+import { environment } from '../../../environments/environment';
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = environment.apiUrl;
 
   // Reactive state
   private _currentUser = signal<User | null>(null);
