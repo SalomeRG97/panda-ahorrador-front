@@ -380,13 +380,24 @@ export const SettingsPage: React.FC = () => {
                   <button onClick={() => editCategory(cat)} className="btn-pastel btn-secondary-pastel btn-xs">
                     <i className="fa-solid fa-pen"></i> Editar
                   </button>
-                  <button
-                    onClick={() => handleDeleteCategory(cat.id)}
-                    className="btn-icon-danger btn-xs"
-                    title="Eliminar categoría"
-                  >
-                    <i className="fa-solid fa-trash"></i>
-                  </button>
+                  {cat.isGlobal ? (
+                    <button
+                      className="btn-icon-danger btn-xs"
+                      disabled
+                      style={{ opacity: 0.4, cursor: 'not-allowed' }}
+                      title="Las categorías predeterminadas del sistema no se pueden eliminar"
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id)}
+                      className="btn-icon-danger btn-xs"
+                      title="Eliminar categoría personal"
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

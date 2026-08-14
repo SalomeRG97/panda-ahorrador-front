@@ -112,15 +112,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       {/* CONFIRM DIALOG MODAL */}
       {confirmVisible && (
-        <div className="confirm-overlay" onClick={() => handleResolveConfirm(false)}>
-          <div className="confirm-card card-pastel" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay confirm-overlay" onClick={() => handleResolveConfirm(false)}>
+          <div className="modal-card card-pastel confirm-card" onClick={(e) => e.stopPropagation()}>
             <div className="confirm-icon">🐼</div>
             <p className="confirm-message">{confirmMessage}</p>
             <div className="confirm-actions">
-              <button className="btn-pastel btn-secondary-pastel" onClick={() => handleResolveConfirm(false)}>
+              <button type="button" className="btn-pastel btn-secondary-pastel" onClick={() => handleResolveConfirm(false)}>
                 {confirmTexts.cancel}
               </button>
-              <button className="btn-pastel btn-primary-pastel" onClick={() => handleResolveConfirm(true)}>
+              <button type="button" className="btn-pastel btn-primary-pastel" onClick={() => handleResolveConfirm(true)}>
                 {confirmTexts.confirm}
               </button>
             </div>
