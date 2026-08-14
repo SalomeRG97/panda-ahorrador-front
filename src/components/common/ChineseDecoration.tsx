@@ -64,7 +64,7 @@ export const ChineseDecoration: React.FC = () => {
         }
 
         @media (max-width: 768px) {
-          .lantern { display: none; }
+          .lantern { display: none !important; }
         }
       `}</style>
     </div>

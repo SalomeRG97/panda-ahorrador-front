@@ -645,11 +645,22 @@ export const WeekDetailPage: React.FC = () => {
           color: #D4566A;
         }
         .btn-icon-danger {
-          background: none;
-          border: none;
+          background: #FFE5EC;
+          border: 1px solid #F4A6C1;
           color: #D4566A;
           cursor: pointer;
-          font-size: 1rem;
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.95rem;
+          transition: background 0.2s ease;
+        }
+        .btn-icon-danger:hover {
+          background: #D4566A;
+          color: white;
         }
         .category-totals-grid {
           display: grid;

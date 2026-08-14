@@ -823,16 +823,18 @@ export const MonthLayoutPage: React.FC = () => {
           box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .incomes-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-        .section-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+        .section-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
         .data-table { width: 100%; border-collapse: collapse; }
-        .data-table th, .data-table td { padding: 10px; border-bottom: 1px solid #FFF0F4; font-size: 0.9rem; }
-        .data-table th { text-align: left; background: #FFF0F4; color: #4A3F55; }
+        .data-table th, .data-table td { padding: 10px 12px; border-bottom: 1px solid #FFF0F4; font-size: 0.9rem; vertical-align: middle; }
+        .data-table th { text-align: left; background: #FFF0F4; color: #4A3F55; white-space: nowrap; }
+        .data-table td { white-space: nowrap; }
+        .data-table td:nth-child(2) { white-space: normal; } /* Concepto puede romper si es muy largo */
         .savings-card { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
         .savings-icon { font-size: 2.5rem; }
         .saving-input-group { display: flex; align-items: center; gap: 6px; width: 100%; }
         .currency-symbol { font-weight: 700; font-size: 1.1rem; }
         .totals-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 20px; }
-        .total-box { padding: 14px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.9rem; }
+        .total-box { padding: 14px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.9rem; white-space: nowrap; }
         .bg-ingresos { background: #EAF6F0; color: #1E4E36; }
         .bg-gastos { background: #FDEEF4; color: #6A1B3B; }
         .bg-ahorros { background: #FFF9EB; color: #5B4810; }
@@ -853,7 +855,8 @@ export const MonthLayoutPage: React.FC = () => {
         .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
         .form-input { padding: 8px 12px; border-radius: 10px; border: 1.5px solid #F4A6C1; outline: none; font-size: 0.9rem; width: 100%; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-        .btn-icon-danger { background: none; border: none; color: #D4566A; cursor: pointer; font-size: 1rem; }
+        .btn-icon-danger { background: #FFE5EC; border: 1px solid #F4A6C1; color: #D4566A; cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: background 0.2s ease; }
+        .btn-icon-danger:hover { background: #D4566A; color: white; }
         @media (max-width: 900px) {
           .incomes-layout { grid-template-columns: 1fr; }
         }

@@ -246,12 +246,15 @@ export const LandingPage: React.FC = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-wrap: wrap;
+          gap: 8px 12px;
         }
         .shortcuts-title {
           font-family: 'Comfortaa', cursive;
-          font-size: 1.15rem;
+          font-size: clamp(1rem, 4vw, 1.15rem);
           font-weight: 700;
           color: #D4566A;
+          margin: 0;
         }
         .shortcuts-date {
           font-size: 0.85rem;
@@ -261,6 +264,8 @@ export const LandingPage: React.FC = () => {
           padding: 4px 12px;
           border-radius: 20px;
           border: 1px solid #F4A6C1;
+          white-space: nowrap;
+          flex-shrink: 0;
         }
         .shortcuts-grid {
           display: grid;

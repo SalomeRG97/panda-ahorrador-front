@@ -176,15 +176,16 @@ export const YearListPage: React.FC = () => {
       <style>{`
         .years-container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
         .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 16px; }
-        .years-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+        .years-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
         .year-card { display: flex; flex-direction: column; gap: 16px; }
-        .year-header { display: flex; justify-content: space-between; align-items: center; }
-        .year-number { font-family: 'Caveat', cursive; font-size: 3rem; font-weight: 700; color: #D4566A; }
-        .year-badge { background: #FFF0F4; border: 1px solid #F4A6C1; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; color: #4A3F55; }
-        .year-info { color: #665275; font-size: 0.95rem; }
-        .year-actions { display: flex; gap: 10px; }
-        .btn-sm { padding: 8px 16px; font-size: 0.9rem; flex: 1; justify-content: center; }
-        .btn-delete-sm { background: #FFE5EC; color: #D4566A; border: 1px solid #F4A6C1; padding: 8px 12px; border-radius: 12px; cursor: pointer; }
+        .year-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .year-number { font-family: 'Caveat', cursive; font-size: 3rem; font-weight: 700; color: #D4566A; line-height: 1; }
+        .year-badge { background: #FFF0F4; border: 1px solid #F4A6C1; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; color: #4A3F55; white-space: nowrap; }
+        .year-info { color: #665275; font-size: 0.95rem; margin: 0; }
+        .year-actions { display: flex; align-items: center; gap: 10px; margin-top: auto; }
+        .btn-sm { padding: 10px 14px; font-size: 0.88rem; flex: 1; justify-content: center; white-space: nowrap; }
+        .btn-delete-sm { background: #FFE5EC; color: #D4566A; border: 1px solid #F4A6C1; width: 42px; height: 42px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; transition: background 0.2s ease; }
+        .btn-delete-sm:hover { background: #D4566A; color: white; }
         .empty-card { text-align: center; padding: 50px 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
         .empty-icon { font-size: 3.5rem; }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
@@ -195,6 +196,12 @@ export const YearListPage: React.FC = () => {
         .form-input { padding: 10px; border-radius: 10px; border: 1.5px solid #F4A6C1; font-family: 'Comfortaa', cursive; outline: none; }
         .help-text { font-size: 0.8rem; color: #888; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+
+        @media (max-width: 600px) {
+          .years-container { margin: 16px auto; padding: 0 12px; }
+          .header-actions { flex-direction: column; text-align: center; }
+          .years-grid { grid-template-columns: 1fr; gap: 16px; }
+        }
       `}</style>
     </div>
   );
