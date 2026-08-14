@@ -6,6 +6,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { EmailService } from '../../../core/services/email.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SharedViewer, SharedOwner } from '../../../core/interfaces/auth.interface';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-share-management',
