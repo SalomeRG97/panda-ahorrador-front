@@ -480,6 +480,12 @@ export class MonthLayoutComponent implements OnInit {
       this.loadMonthData();
     });
 
+    this.route.queryParams.subscribe(qParams => {
+      if (qParams['tab'] && ['calendar', 'incomes', 'summary', 'challenge'].includes(qParams['tab'])) {
+        this.setTab(qParams['tab'] as any);
+      }
+    });
+
     this.apiService.getCategories().subscribe(cats => this.categories = cats);
   }
 

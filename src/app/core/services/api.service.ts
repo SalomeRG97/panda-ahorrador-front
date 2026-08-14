@@ -161,5 +161,22 @@ export class ApiService {
     return this.http.get<{ success: boolean; data: any[] }>(`${this.apiUrl}/summary/month/${monthId}/categories-weekly`)
       .pipe(map(res => res.data));
   }
+
+  // ACCESOS DIRECTOS (TODAY SHORTCUTS)
+  getTodayShortcuts(): Observable<TodayShortcuts> {
+    return this.http.get<{ success: boolean; data: TodayShortcuts }>(`${this.apiUrl}/shortcuts/today`)
+      .pipe(map(res => res.data));
+  }
 }
+
+export interface TodayShortcuts {
+  todayStr: string;
+  currentYearNum: number;
+  currentMonthNum: number;
+  year?: { id: number; year: number; start_month: number; end_month: number } | null;
+  month?: { id: number; month_number: number; month_name: string; year_id: number } | null;
+  week?: { id: number; week_number: number; start_date: string; end_date: string } | null;
+  challenge?: { month_challenge_id: number; id: number; title: string; description: string; icon: string } | null;
+}
+
 

@@ -20,10 +20,10 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('panda-ahorrador');
   });
 
-  it('should render title', () => {
+  it('should render footer text', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, panda-ahorrador');
+    expect(compiled.querySelector('.app-footer')?.textContent).toContain('El panda ahorrador');
   });
 });

@@ -51,5 +51,6 @@ import { ToastComponent } from './shared/components/toast/toast.component';
   `]
 })
 export class AppComponent {
+  title = 'panda-ahorrador';
   currentYear = new Date().getFullYear();
 }
