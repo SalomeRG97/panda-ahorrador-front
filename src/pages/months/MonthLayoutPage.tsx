@@ -44,6 +44,7 @@ export const MonthLayoutPage: React.FC = () => {
   // Modales
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showIncomeModal, setShowIncomeModal] = useState(false);
+  const [editingIncomeId, setEditingIncomeId] = useState<number | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<BudgetExpense | null>(null);
 
   const [newExpense, setNewExpense] = useState<Partial<BudgetExpense>>({ budget_amount: 0, concept: '', payment_method: '' });
@@ -258,9 +259,16 @@ export const MonthLayoutPage: React.FC = () => {
     }
   };
 
-  const openIncomeModal = () => {
+  const openIncomeModal = (inc?: Income) => {
     const today = new Date().toISOString().split('T')[0];
-    setNewIncome({ month_id: mId, date: today, concept: '', amount: 0 });
+    if (inc && inc.id) {
+      setEditingIncomeId(inc.id);
+      const formattedDate = inc.date ? inc.date.split('T')[0] : today;
+      setNewIncome({ month_id: mId, date: formattedDate, concept: inc.concept, amount: inc.amount });
+    } else {
+      setEditingIncomeId(null);
+      setNewIncome({ month_id: mId, date: today, concept: '', amount: 0 });
+    }
     setShowIncomeModal(true);
   };
 
@@ -270,16 +278,26 @@ export const MonthLayoutPage: React.FC = () => {
       return;
     }
     try {
-      await ApiService.createIncome(newIncome as Income);
-      success('Ingreso registrado 💰');
+      if (editingIncomeId) {
+        await ApiService.updateIncome(editingIncomeId, newIncome as Income);
+        success('Ingreso actualizado 💰');
+      } else {
+        await ApiService.createIncome(newIncome as Income);
+        success('Ingreso registrado 💰');
+      }
       setShowIncomeModal(false);
+      setEditingIncomeId(null);
       loadMonthData();
     } catch (err: any) {
       error(err.response?.data?.message || 'Error al guardar ingreso');
     }
   };
 
-  const deleteIncome = async (id: number) => {
+  const deleteIncome = async (id?: number) => {
+    if (!id) {
+      error('ID de ingreso no válido');
+      return;
+    }
     const confirmed = await confirm('¿Deseas eliminar este ingreso?');
     if (!confirmed) return;
 
@@ -418,7 +436,7 @@ export const MonthLayoutPage: React.FC = () => {
             <div className="incomes-main">
               <div className="section-title-row">
                 <h3>Ingresos del Mes</h3>
-                <button onClick={openIncomeModal} className="btn-pastel btn-primary-pastel">
+                <button onClick={() => openIncomeModal()} className="btn-pastel btn-primary-pastel">
                   <i className="fa-solid fa-plus"></i> Agregar Ingreso
                 </button>
               </div>
@@ -436,13 +454,27 @@ export const MonthLayoutPage: React.FC = () => {
                   <tbody>
                     {monthDetails.incomes?.map((inc: Income) => (
                       <tr key={inc.id}>
-                        <td>{inc.date}</td>
+                        <td>{inc.date ? inc.date.split('T')[0] : ''}</td>
                         <td><strong>{inc.concept}</strong></td>
                         <td className="text-green">{formatCurrency(inc.amount)}</td>
                         <td>
-                          <button onClick={() => deleteIncome(inc.id!)} className="btn-icon-danger">
-                            <i className="fa-solid fa-trash"></i>
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => openIncomeModal(inc)}
+                              className="btn-pastel btn-secondary-pastel"
+                              style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+                              title="Editar Ingreso"
+                            >
+                              <i className="fa-solid fa-pen"></i>
+                            </button>
+                            <button
+                              onClick={() => deleteIncome(inc.id)}
+                              className="btn-icon-danger"
+                              title="Eliminar Ingreso"
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -742,12 +774,12 @@ export const MonthLayoutPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CREAR INGRESO */}
+      {/* MODAL CREAR / EDITAR INGRESO */}
       {showIncomeModal && (
         <div className="modal-overlay" onClick={() => setShowIncomeModal(false)}>
           <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>💰 Agregar Nuevo Ingreso</h3>
+              <h3>💰 {editingIncomeId ? 'Editar Ingreso' : 'Agregar Nuevo Ingreso'}</h3>
             </div>
             <div className="modal-body">
               <div className="form-group">
@@ -784,7 +816,7 @@ export const MonthLayoutPage: React.FC = () => {
                 Cancelar
               </button>
               <button onClick={saveIncome} className="btn-pastel btn-primary-pastel">
-                Guardar Ingreso
+                {editingIncomeId ? 'Actualizar Ingreso' : 'Guardar Ingreso'}
               </button>
             </div>
           </div>

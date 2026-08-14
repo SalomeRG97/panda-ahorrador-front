@@ -713,6 +713,7 @@ export const WeekDetailPage: React.FC = () => {
           flex-direction: column;
           gap: 8px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          border: 1.5px solid rgba(0,0,0,0.08);
         }
         .cat-card-header {
           display: flex;

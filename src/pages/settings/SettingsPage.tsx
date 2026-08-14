@@ -160,7 +160,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: number) => {
-    const confirmed = await confirm('¿Deseas eliminar esta categoría personal?');
+    const confirmed = await confirm('¿Deseas eliminar esta categoría? (Los gastos asociados quedarán como <Sin Categorizar>)');
     if (!confirmed) return;
 
     try {
@@ -380,15 +380,13 @@ export const SettingsPage: React.FC = () => {
                   <button onClick={() => editCategory(cat)} className="btn-pastel btn-secondary-pastel btn-xs">
                     <i className="fa-solid fa-pen"></i> Editar
                   </button>
-                  {!cat.isGlobal && (
-                    <button
-                      onClick={() => handleDeleteCategory(cat.id)}
-                      className="btn-icon-danger btn-xs"
-                      title="Eliminar categoría personal"
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleDeleteCategory(cat.id)}
+                    className="btn-icon-danger btn-xs"
+                    title="Eliminar categoría"
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
                 </div>
               </div>
             ))}
