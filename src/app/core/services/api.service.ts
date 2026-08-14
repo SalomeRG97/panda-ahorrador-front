@@ -24,6 +24,21 @@ export class ApiService {
       .pipe(map(res => res.data));
   }
 
+  createCategory(data: { name: string; color: string; icon: string }): Observable<Category> {
+    return this.http.post<{ success: boolean; data: Category }>(`${this.apiUrl}/categories`, data)
+      .pipe(map(res => res.data));
+  }
+
+  updateCategory(id: number, data: { name?: string; color?: string; icon?: string }): Observable<Category> {
+    return this.http.put<{ success: boolean; data: Category }>(`${this.apiUrl}/categories/${id}`, data)
+      .pipe(map(res => res.data));
+  }
+
+  deleteCategory(id: number): Observable<boolean> {
+    return this.http.delete<{ success: boolean }>(`${this.apiUrl}/categories/${id}`)
+      .pipe(map(res => res.success));
+  }
+
   // AÑOS
   getYears(): Observable<Year[]> {
     return this.http.get<{ success: boolean; data: Year[] }>(`${this.apiUrl}/years`)
@@ -110,6 +125,11 @@ export class ApiService {
   }
 
   // SEMANAS
+  getWeeksByMonth(monthId: number): Observable<Week[]> {
+    return this.http.get<{ success: boolean; data: Week[] }>(`${this.apiUrl}/weeks/month/${monthId}`)
+      .pipe(map(res => res.data));
+  }
+
   getWeekDetail(weekId: number): Observable<{ week: Week; budgetExpenses: BudgetExpense[]; extraExpenses: ExtraExpense[]; categoryTotals: CategoryWeekTotal[] }> {
     return this.http.get<{ success: boolean; data: any }>(`${this.apiUrl}/weeks/${weekId}`)
       .pipe(map(res => res.data));
@@ -142,3 +162,4 @@ export class ApiService {
       .pipe(map(res => res.data));
   }
 }
+

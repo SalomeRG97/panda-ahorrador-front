@@ -1,16 +1,20 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
+import { ToastService } from '../../../shared/services/toast.service';
+import { PandaCurrencyPipe } from '../../../shared/pipes/currency-format.pipe';
 import { Category } from '../../../core/interfaces/category.interface';
 import { BudgetExpense, ExtraExpense } from '../../../core/interfaces/expense.interface';
 import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-week-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PandaCurrencyPipe],
   template: `
     <div class="week-container animate-fade-in-up" *ngIf="weekData">
       <!-- HEADER -->
@@ -19,9 +23,17 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
           <span class="chinese-title">周度详情 — Detalle de Semana</span>
           <h1>Semana {{ weekData.week.week_number }} ({{ weekData.week.start_date }} al {{ weekData.week.end_date }})</h1>
         </div>
-        <a [routerLink]="['/years', yearId, 'months', monthId]" class="btn-pastel btn-secondary-pastel">
-          <i class="fa-solid fa-arrow-left"></i> Volver a Agenda del Mes
-        </a>
+        <div class="header-nav-actions">
+          <button *ngIf="prevWeekId" (click)="goToWeek(prevWeekId)" class="btn-pastel btn-secondary-pastel btn-nav">
+            <i class="fa-solid fa-chevron-left"></i> Semana anterior
+          </button>
+          <a [routerLink]="['/years', yearId, 'months', monthId]" class="btn-pastel btn-secondary-pastel">
+            <i class="fa-solid fa-calendar-days"></i> Agenda del Mes
+          </a>
+          <button *ngIf="nextWeekId" (click)="goToWeek(nextWeekId)" class="btn-pastel btn-secondary-pastel btn-nav">
+            Semana siguiente <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
 
       <!-- SECCIÓN 1: GASTOS PRESUPUESTADOS (DEL CALENDARIO) -->
@@ -40,30 +52,32 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
                 <th>Categoría</th>
                 <th>Fecha</th>
                 <th>Concepto</th>
+                <th>Medio de Pago</th>
                 <th>Presupuestado</th>
                 <th>Valor Real Gastado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let b of weekData.budgetExpenses">
+              <tr *ngFor="let b of weekData.budgetExpenses; trackBy: trackById">
                 <td>
-                  <select [(ngModel)]="b.category_id" (change)="updateBudgetRow(b)" class="table-select" [style.borderLeftColor]="b.category_color">
+                  <select [(ngModel)]="b.category_id" (change)="queueBudgetUpdate(b)" class="table-select" [style.borderLeftColor]="b.category_color">
                     <option *ngFor="let c of categories" [value]="c.id">{{ c.icon }} {{ c.name }}</option>
                   </select>
                 </td>
-                <td><input type="date" [(ngModel)]="b.date" (change)="updateBudgetRow(b)" class="table-input"></td>
-                <td><input type="text" [(ngModel)]="b.concept" (change)="updateBudgetRow(b)" class="table-input"></td>
-                <td class="font-bold">$ {{ b.budget_amount | number:'1.2-2' }}</td>
+                <td><input type="date" [(ngModel)]="b.date" (change)="queueBudgetUpdate(b)" class="table-input"></td>
+                <td><input type="text" [(ngModel)]="b.concept" (input)="queueBudgetUpdate(b)" class="table-input"></td>
+                <td><input type="text" [(ngModel)]="b.payment_method" (input)="queueBudgetUpdate(b)" class="table-input" placeholder="Ej: Tarjeta, Efectivo"></td>
+                <td class="font-bold">{{ b.budget_amount | pandaCurrency }}</td>
                 <td>
-                  <input type="number" [(ngModel)]="b.real_amount" (change)="updateBudgetRow(b)" class="table-input input-real-value" placeholder="$ 0">
+                  <input type="text" [value]="formatAmountDisplay(b.real_amount)" (input)="onAmountInput($event, b, 'real_amount', true)" class="table-input input-real-value" placeholder="$ 0">
                 </td>
                 <td>
                   <button (click)="deleteBudgetRow(b.id!)" class="btn-icon-danger" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
               <tr *ngIf="weekData.budgetExpenses.length === 0">
-                <td colspan="6" class="text-center">No hay gastos presupuestados para esta semana desde el calendario.</td>
+                <td colspan="7" class="text-center">No hay gastos presupuestados para esta semana desde el calendario.</td>
               </tr>
             </tbody>
           </table>
@@ -89,26 +103,28 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
                 <th>Categoría</th>
                 <th>Fecha</th>
                 <th>Concepto</th>
+                <th>Medio de Pago</th>
                 <th>Valor Gastado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let ext of weekData.extraExpenses">
+              <tr *ngFor="let ext of weekData.extraExpenses; trackBy: trackById">
                 <td>
-                  <select [(ngModel)]="ext.category_id" (change)="updateExtraRow(ext)" class="table-select">
+                  <select [(ngModel)]="ext.category_id" (change)="queueExtraUpdate(ext)" class="table-select">
                     <option *ngFor="let c of categories" [value]="c.id">{{ c.icon }} {{ c.name }}</option>
                   </select>
                 </td>
-                <td><input type="date" [(ngModel)]="ext.date" (change)="updateExtraRow(ext)" class="table-input"></td>
-                <td><input type="text" [(ngModel)]="ext.concept" (change)="updateExtraRow(ext)" class="table-input"></td>
-                <td><input type="number" [(ngModel)]="ext.amount" (change)="updateExtraRow(ext)" class="table-input input-real-value"></td>
+                <td><input type="date" [(ngModel)]="ext.date" (change)="queueExtraUpdate(ext)" class="table-input"></td>
+                <td><input type="text" [(ngModel)]="ext.concept" (input)="queueExtraUpdate(ext)" class="table-input"></td>
+                <td><input type="text" [(ngModel)]="ext.payment_method" (input)="queueExtraUpdate(ext)" class="table-input" placeholder="Ej: Tarjeta, Efectivo"></td>
+                <td><input type="text" [value]="formatAmountDisplay(ext.amount)" (input)="onAmountInput($event, ext, 'amount', false)" class="table-input input-real-value" placeholder="$ 0"></td>
                 <td>
                   <button (click)="deleteExtraRow(ext.id!)" class="btn-icon-danger" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                 </td>
               </tr>
               <tr *ngIf="weekData.extraExpenses.length === 0">
-                <td colspan="5" class="text-center">No se han registrado gastos extra en esta semana.</td>
+                <td colspan="6" class="text-center">No se han registrado gastos extra en esta semana.</td>
               </tr>
             </tbody>
           </table>
@@ -122,7 +138,7 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
         </div>
 
         <div class="category-totals-grid">
-          <div *ngFor="let catTotal of weekData.categoryTotals" 
+          <div *ngFor="let catTotal of weekData.categoryTotals; trackBy: trackByCatId" 
                class="category-total-card" 
                [style.backgroundColor]="catTotal.categoryColor">
             <div class="cat-card-header">
@@ -130,8 +146,8 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
               <span class="cat-name">{{ catTotal.categoryName }}</span>
             </div>
             <div class="cat-card-body">
-              <span>Presupuestado: $ {{ catTotal.totalBudget | number:'1.0-0' }}</span>
-              <strong>Real Gastado: $ {{ catTotal.totalSpent | number:'1.2-2' }}</strong>
+              <span>Presupuestado: {{ catTotal.totalBudget | pandaCurrency }}</span>
+              <strong>Real Gastado: {{ catTotal.totalSpent | pandaCurrency }}</strong>
             </div>
           </div>
         </div>
@@ -160,6 +176,10 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
               <input type="text" [(ngModel)]="newExtra.concept" placeholder="Ej: Salida espontánea a cenar" class="form-input">
             </div>
             <div class="form-group">
+              <label>Medio de Pago:</label>
+              <input type="text" [(ngModel)]="newExtra.payment_method" placeholder="Ej: Tarjeta débito, Efectivo" class="form-input">
+            </div>
+            <div class="form-group">
               <label>Monto Real Gastado ($):</label>
               <input type="number" [(ngModel)]="newExtra.amount" class="form-input">
             </div>
@@ -185,6 +205,19 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-nav-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .section-box {
       display: flex;
@@ -274,7 +307,9 @@ import { CategoryWeekTotal, Week } from '../../../core/interfaces/week.interface
 })
 export class WeekDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private apiService = inject(ApiService);
+  private toastService = inject(ToastService);
 
   yearId!: number;
   monthId!: number;
@@ -283,8 +318,17 @@ export class WeekDetailComponent implements OnInit {
   weekData: any;
   categories: Category[] = [];
 
+  // Week navigation
+  allWeeks: Week[] = [];
+  prevWeekId: number | null = null;
+  nextWeekId: number | null = null;
+
   showExtraModal = false;
-  newExtra: Partial<ExtraExpense> = { amount: 0, concept: '' };
+  newExtra: Partial<ExtraExpense> = { amount: 0, concept: '', payment_method: '' };
+
+  // Debounce subjects
+  private budgetUpdateSubject = new Subject<BudgetExpense>();
+  private extraUpdateSubject = new Subject<ExtraExpense>();
 
   ngOnInit(): void {
     this.route.params.subscribe(params => {
@@ -292,9 +336,14 @@ export class WeekDetailComponent implements OnInit {
       this.monthId = +params['monthId'];
       this.weekId = +params['weekId'];
       this.loadWeekData();
+      this.loadAllWeeks();
     });
 
     this.apiService.getCategories().subscribe(cats => this.categories = cats);
+
+    // Debounced updates (500ms delay)
+    this.budgetUpdateSubject.pipe(debounceTime(500)).subscribe(b => this.updateBudgetRow(b));
+    this.extraUpdateSubject.pipe(debounceTime(500)).subscribe(ext => this.updateExtraRow(ext));
   }
 
   loadWeekData(): void {
@@ -303,31 +352,83 @@ export class WeekDetailComponent implements OnInit {
     });
   }
 
+  loadAllWeeks(): void {
+    this.apiService.getWeeksByMonth(this.monthId).subscribe(weeks => {
+      this.allWeeks = weeks;
+      this.calculateNavigation();
+    });
+  }
+
+  calculateNavigation(): void {
+    const idx = this.allWeeks.findIndex(w => w.id === this.weekId);
+    this.prevWeekId = idx > 0 ? this.allWeeks[idx - 1].id : null;
+    this.nextWeekId = idx < this.allWeeks.length - 1 ? this.allWeeks[idx + 1].id : null;
+  }
+
+  goToWeek(weekId: number): void {
+    this.router.navigate(['/years', this.yearId, 'months', this.monthId, 'weeks', weekId]);
+  }
+
+  // Debounced queue methods
+  queueBudgetUpdate(b: BudgetExpense): void {
+    this.budgetUpdateSubject.next(b);
+  }
+
+  queueExtraUpdate(ext: ExtraExpense): void {
+    this.extraUpdateSubject.next(ext);
+  }
+
   updateBudgetRow(b: BudgetExpense): void {
+    const isOutsideWeek = this.weekData?.week && b.date && (b.date < this.weekData.week.start_date || b.date > this.weekData.week.end_date);
     this.apiService.updateBudgetExpense(b.id!, {
+      month_id: this.monthId,
       category_id: b.category_id,
       date: b.date,
       concept: b.concept,
       budget_amount: b.budget_amount,
-      real_amount: b.real_amount
-    }).subscribe(() => this.loadWeekData());
+      real_amount: b.real_amount,
+      payment_method: b.payment_method
+    }).subscribe(() => {
+      if (isOutsideWeek) {
+        this.toastService.info('El gasto ha sido movido a la semana correspondiente a su fecha 📅');
+      }
+      this.loadWeekData();
+    });
   }
 
-  deleteBudgetRow(id: number): void {
-    this.apiService.deleteBudgetExpense(id).subscribe(() => this.loadWeekData());
+  async deleteBudgetRow(id: number): Promise<void> {
+    const confirmed = await this.toastService.confirm('¿Deseas eliminar este gasto presupuestado?');
+    if (!confirmed) return;
+    this.apiService.deleteBudgetExpense(id).subscribe(() => {
+      this.toastService.success('Gasto presupuestado eliminado');
+      this.loadWeekData();
+    });
   }
 
   updateExtraRow(ext: ExtraExpense): void {
+    const isOutsideWeek = this.weekData?.week && ext.date && (ext.date < this.weekData.week.start_date || ext.date > this.weekData.week.end_date);
     this.apiService.updateExtraExpense(ext.id!, {
+      month_id: this.monthId,
       category_id: ext.category_id,
       date: ext.date,
       concept: ext.concept,
-      amount: ext.amount
-    }).subscribe(() => this.loadWeekData());
+      amount: ext.amount,
+      payment_method: ext.payment_method
+    }).subscribe(() => {
+      if (isOutsideWeek) {
+        this.toastService.info('El gasto ha sido movido a la semana correspondiente a su fecha 📅');
+      }
+      this.loadWeekData();
+    });
   }
 
-  deleteExtraRow(id: number): void {
-    this.apiService.deleteExtraExpense(id).subscribe(() => this.loadWeekData());
+  async deleteExtraRow(id: number): Promise<void> {
+    const confirmed = await this.toastService.confirm('¿Deseas eliminar este gasto extra?');
+    if (!confirmed) return;
+    this.apiService.deleteExtraExpense(id).subscribe(() => {
+      this.toastService.success('Gasto extra eliminado');
+      this.loadWeekData();
+    });
   }
 
   openExtraModal(): void {
@@ -338,7 +439,8 @@ export class WeekDetailComponent implements OnInit {
       category_id: this.categories[0]?.id || 1,
       date: today,
       concept: '',
-      amount: 0
+      amount: 0,
+      payment_method: ''
     };
     this.showExtraModal = true;
   }
@@ -346,10 +448,44 @@ export class WeekDetailComponent implements OnInit {
   closeExtraModal(): void { this.showExtraModal = false; }
 
   saveExtraExpense(): void {
-    if (!this.newExtra.concept || !this.newExtra.amount) return;
+    if (!this.newExtra.concept || !this.newExtra.amount) {
+      this.toastService.warning('Por favor completa el concepto y el monto');
+      return;
+    }
+    const isOutsideWeek = this.weekData?.week && this.newExtra.date && (this.newExtra.date < this.weekData.week.start_date || this.newExtra.date > this.weekData.week.end_date);
     this.apiService.createExtraExpense(this.newExtra as ExtraExpense).subscribe(() => {
+      if (isOutsideWeek) {
+        this.toastService.info('Gasto extra creado y movido a la semana que corresponde a su fecha 📅');
+      } else {
+        this.toastService.success('Gasto extra registrado exitosamente 🌸');
+      }
       this.closeExtraModal();
       this.loadWeekData();
     });
   }
+
+  formatAmountDisplay(val: any): string {
+    if (val == null || val === '' || val === 0) return '';
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    if (isNaN(num) || num === 0) return '';
+    return '$ ' + num.toLocaleString('es-CO');
+  }
+
+  onAmountInput(event: Event, item: any, fieldName: string, isBudget: boolean): void {
+    const inputEl = event.target as HTMLInputElement;
+    const rawValue = inputEl.value.replace(/\D/g, '');
+    const numValue = rawValue ? parseInt(rawValue, 10) : 0;
+
+    item[fieldName] = numValue;
+    inputEl.value = numValue ? '$ ' + numValue.toLocaleString('es-CO') : '';
+
+    if (isBudget) {
+      this.queueBudgetUpdate(item);
+    } else {
+      this.queueExtraUpdate(item);
+    }
+  }
+
+  trackById(index: number, item: any): number { return item.id; }
+  trackByCatId(index: number, item: CategoryWeekTotal): number { return item.categoryId; }
 }

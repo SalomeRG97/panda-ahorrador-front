@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { ChineseDecorationComponent } from './shared/components/chinese-decoration/chinese-decoration.component';
+import { ToastComponent } from './shared/components/toast/toast.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent, ChineseDecorationComponent],
+  imports: [RouterOutlet, NavbarComponent, ChineseDecorationComponent, ToastComponent],
   template: `
     <div class="app-layout">
       <app-chinese-decoration></app-chinese-decoration>
@@ -14,6 +15,7 @@ import { ChineseDecorationComponent } from './shared/components/chinese-decorati
       <main class="main-content">
         <router-outlet></router-outlet>
       </main>
+      <app-toast></app-toast>
       <footer class="app-footer">
         <div class="footer-container">
           <span>🌸 熊猫理财 El panda ahorrador &copy; {{ currentYear }}</span>

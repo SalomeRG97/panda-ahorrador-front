@@ -71,7 +71,7 @@ import { Category } from '../../core/interfaces/category.interface';
         </div>
         <p class="categories-subtitle">Cada categoría tiene un color único que te acompañará en calendarios, listas y gráficos:</p>
         <div class="categories-grid">
-          <div *ngFor="let cat of categories" class="category-card" [style.backgroundColor]="cat.color">
+          <div *ngFor="let cat of categories; trackBy: trackById" class="category-card" [style.backgroundColor]="cat.color">
             <span class="category-icon">{{ cat.icon }}</span>
             <span class="category-name">{{ cat.name }}</span>
           </div>
@@ -196,4 +196,7 @@ export class LandingComponent implements OnInit {
       error: (err: any) => console.error(err)
     });
   }
+
+  trackById(index: number, cat: Category): number { return cat.id; }
 }
+

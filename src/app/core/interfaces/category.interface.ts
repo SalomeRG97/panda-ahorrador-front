@@ -3,4 +3,7 @@ export interface Category {
   name: string;
   color: string;
   icon: string;
+  user_id?: number | null;
+  isGlobal?: boolean;
 }
+

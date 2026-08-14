@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
+import { ToastService } from '../../../shared/services/toast.service';
+import { PandaCurrencyPipe } from '../../../shared/pipes/currency-format.pipe';
 import { Category } from '../../../core/interfaces/category.interface';
 import { BudgetExpense, ExtraExpense } from '../../../core/interfaces/expense.interface';
 import { Income } from '../../../core/interfaces/income.interface';
@@ -12,7 +14,7 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
 @Component({
   selector: 'app-month-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PandaCurrencyPipe],
   template: `
     <div class="month-container animate-fade-in-up" *ngIf="monthDetails">
       <!-- HEADER DEL MES -->
@@ -51,7 +53,7 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
           <p class="subtitle">Haz clic en cualquier día para programar un gasto o ver sus detalles.</p>
           <div class="weeks-shortcut">
             <span>Acceso a Semanas:</span>
-            <a *ngFor="let w of monthDetails.weeks" [routerLink]="['/years', yearId, 'months', monthId, 'weeks', w.id]" class="week-pill">
+            <a *ngFor="let w of monthDetails.weeks; trackBy: trackByWeekId" [routerLink]="['/years', yearId, 'months', monthId, 'weeks', w.id]" class="week-pill">
               Semana {{ w.week_number }}
             </a>
           </div>
@@ -68,19 +70,19 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
             <div class="day-name">Vie</div>
             <div class="day-name">Sáb</div>
 
-            <div *ngFor="let dayCell of calendarDays" 
+            <div *ngFor="let dayCell of calendarDays; trackBy: trackByDateStr" 
                  class="calendar-day-cell" 
                  [class.empty-day]="!dayCell.dateStr"
                  (click)="dayCell.dateStr && openExpenseModal(dayCell.dateStr)">
               <div class="day-number" *ngIf="dayCell.dayNumber">{{ dayCell.dayNumber }}</div>
               <div class="day-expenses">
-                <div *ngFor="let exp of dayCell.expenses" 
+                <div *ngFor="let exp of dayCell.expenses; trackBy: trackById" 
                      class="expense-tag" 
                      [style.backgroundColor]="exp.category_color"
                      (click)="$event.stopPropagation(); openDetailPopup(exp)">
                   <span class="exp-icon">{{ exp.category_icon }}</span>
                   <span class="exp-concept">{{ exp.concept }}</span>
-                  <span class="exp-amount">$ {{ exp.budget_amount | number:'1.0-0' }}</span>
+                  <span class="exp-amount">{{ exp.budget_amount | pandaCurrency }}</span>
                 </div>
               </div>
             </div>
@@ -111,10 +113,10 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let inc of monthDetails.incomes">
+                  <tr *ngFor="let inc of monthDetails.incomes; trackBy: trackById">
                     <td>{{ inc.date }}</td>
                     <td><strong>{{ inc.concept }}</strong></td>
-                    <td class="text-green">$ {{ inc.amount | number:'1.2-2' }}</td>
+                    <td class="text-green">{{ inc.amount | pandaCurrency }}</td>
                     <td>
                       <button (click)="deleteIncome(inc.id!)" class="btn-icon-danger"><i class="fa-solid fa-trash"></i></button>
                     </td>
@@ -150,19 +152,19 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
             <thead>
               <tr>
                 <th>Categoría</th>
-                <th *ngFor="let w of monthDetails.weeks">Semana {{ w.week_number }}</th>
+                <th *ngFor="let w of monthDetails.weeks; trackBy: trackByWeekId">Semana {{ w.week_number }}</th>
                 <th>TOTAL MENSUAL</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let catRow of weeklyBreakdown">
+              <tr *ngFor="let catRow of weeklyBreakdown; trackBy: trackByCatRowId">
                 <td class="category-title-cell">
                   <span class="badge-category" [style.backgroundColor]="catRow.categoryColor">
                     {{ catRow.categoryIcon }} {{ catRow.categoryName }}
                   </span>
                 </td>
-                <td *ngFor="let w of catRow.weeks">$ {{ w.total | number:'1.0-0' }}</td>
-                <td class="total-col">$ {{ catRow.monthTotal | number:'1.2-2' }}</td>
+                <td *ngFor="let w of catRow.weeks">{{ w.total | pandaCurrency }}</td>
+                <td class="total-col">{{ catRow.monthTotal | pandaCurrency }}</td>
               </tr>
             </tbody>
           </table>
@@ -172,19 +174,76 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
         <div class="totals-summary-grid">
           <div class="total-box bg-ingresos">
             <span>Total Ingresos</span>
-            <strong>$ {{ totalIncomes | number:'1.2-2' }}</strong>
+            <strong>{{ totalIncomes | pandaCurrency }}</strong>
           </div>
           <div class="total-box bg-gastos">
             <span>Total Gastos</span>
-            <strong>$ {{ totalExpenses | number:'1.2-2' }}</strong>
+            <strong>{{ totalExpenses | pandaCurrency }}</strong>
           </div>
           <div class="total-box bg-ahorros">
             <span>Total Ahorro</span>
-            <strong>$ {{ monthSaving | number:'1.2-2' }}</strong>
+            <strong>{{ monthSaving | pandaCurrency }}</strong>
           </div>
           <div class="total-box" style="background:#A8D8EA; color:#1E4B5E">
             <span>Restante Libre</span>
-            <strong>$ {{ totalRemaining | number:'1.2-2' }}</strong>
+            <strong>{{ totalRemaining | pandaCurrency }}</strong>
+          </div>
+        </div>
+
+        <!-- SECCIÓN DESGLOSE POR MEDIO DE PAGO -->
+        <div class="payment-methods-section" style="margin-top: 32px;">
+          <h3 style="margin-bottom: 16px; color: #D4566A;">💳 Totalización de Gastos por Medio de Pago</h3>
+          
+          <!-- TOTALES GENERALES POR MEDIO DE PAGO -->
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 1.05rem; color: #4A3F55; margin-bottom: 12px;">Totales Generales por Tipo de Pago</h4>
+            <div class="totals-summary-grid" *ngIf="paymentMethodsOverall.length > 0; else noPayments">
+              <div *ngFor="let pm of paymentMethodsOverall" class="total-box" style="background: #FFF0F4; border: 1.5px solid #F4A6C1; color: #4A3F55;">
+                <span style="font-weight: 700; font-size: 0.9rem;">💳 {{ pm.method }}</span>
+                <strong style="color: #D4566A; font-size: 1.15rem;">{{ pm.total | pandaCurrency }}</strong>
+              </div>
+            </div>
+            <ng-template #noPayments>
+              <p style="color: #8C7B99; font-style: italic; font-size: 0.9rem;">No hay registrados medios de pago para este mes aún.</p>
+            </ng-template>
+          </div>
+
+          <!-- DETALLE DESPLEGABLE POR CATEGORÍA -->
+          <div style="margin-top: 20px;">
+            <h4 style="font-size: 1.05rem; color: #4A3F55; margin-bottom: 12px;">Desglose por Categoría (Clic para desplegar)</h4>
+            <div class="category-payment-list" style="display: flex; flex-direction: column; gap: 10px;">
+              <div *ngFor="let catRow of categoryPaymentBreakdown" class="card-pastel" style="padding: 14px 18px; margin: 0; background: #FFF9FA;">
+                <div (click)="toggleCategoryBreakdown(catRow)" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span class="badge-category" [style.backgroundColor]="catRow.categoryColor">
+                      {{ catRow.categoryIcon }} {{ catRow.categoryName }}
+                    </span>
+                    <span style="font-size: 0.85rem; color: #8C7B99; font-weight: 600;">({{ catRow.methods.length }} medios de pago)</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <strong style="color: #D4566A; font-size: 1rem;">{{ catRow.total | pandaCurrency }}</strong>
+                    <span style="font-size: 0.9rem; color: #D4566A; font-weight: bold;">{{ catRow.expanded ? '▲' : '▼' }}</span>
+                  </div>
+                </div>
+
+                <div *ngIf="catRow.expanded" style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed #F4A6C1;">
+                  <table class="data-table" style="font-size: 0.85rem;">
+                    <thead>
+                      <tr>
+                        <th>Medio de Pago Usado</th>
+                        <th>Total Gastado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let m of catRow.methods">
+                        <td>💳 <strong>{{ m.method }}</strong></td>
+                        <td style="color: #D4566A; font-weight: 700;">{{ m.total | pandaCurrency }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -212,7 +271,7 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
 
         <!-- GRID DE DÍAS DEL RETO -->
         <div class="challenge-days-grid">
-          <div *ngFor="let day of challengeData.progress" 
+          <div *ngFor="let day of challengeData.progress; trackBy: trackByDayNum" 
                class="challenge-day-card" 
                [class.completed]="day.completed"
                (click)="toggleChallengeDay(day)">
@@ -227,7 +286,6 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
         <div class="modal-card card-pastel">
           <div class="modal-header">
             <h3>🌸 Agregar Gasto Presupuestado</h3>
-            <button (click)="closeExpenseModal()" class="close-btn">&times;</button>
           </div>
           <div class="modal-body">
             <div class="form-group">
@@ -237,12 +295,16 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
             <div class="form-group">
               <label>Categoría:</label>
               <select [(ngModel)]="newExpense.category_id" class="form-input">
-                <option *ngFor="let c of categories" [value]="c.id">{{ c.icon }} {{ c.name }}</option>
+                <option *ngFor="let c of categories; trackBy: trackById" [value]="c.id">{{ c.icon }} {{ c.name }}</option>
               </select>
             </div>
             <div class="form-group">
               <label>Concepto / Detalle:</label>
               <input type="text" [(ngModel)]="newExpense.concept" placeholder="Ej: Servicio de luz" class="form-input">
+            </div>
+            <div class="form-group">
+              <label>Medio de Pago:</label>
+              <input type="text" [(ngModel)]="newExpense.payment_method" placeholder="Ej: Débito, Efectivo" class="form-input">
             </div>
             <div class="form-group">
               <label>Monto Presupuestado ($):</label>
@@ -261,7 +323,6 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
         <div class="modal-card card-pastel">
           <div class="modal-header">
             <h3>Detalle del Gasto</h3>
-            <button (click)="selectedExpense = null" class="close-btn">&times;</button>
           </div>
           <div class="modal-body">
             <div class="badge-category" [style.backgroundColor]="selectedExpense.category_color">
@@ -269,8 +330,9 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
             </div>
             <h2 style="margin-top:12px;">{{ selectedExpense.concept }}</h2>
             <p>Fecha: <strong>{{ selectedExpense.date }}</strong></p>
-            <p>Monto Presupuestado: <strong>$ {{ selectedExpense.budget_amount | number:'1.2-2' }}</strong></p>
-            <p *ngIf="selectedExpense.real_amount">Monto Real: <strong>$ {{ selectedExpense.real_amount | number:'1.2-2' }}</strong></p>
+            <p *ngIf="selectedExpense.payment_method">Medio de Pago: <strong>{{ selectedExpense.payment_method }}</strong></p>
+            <p>Monto Presupuestado: <strong>{{ selectedExpense.budget_amount | pandaCurrency }}</strong></p>
+            <p *ngIf="selectedExpense.real_amount">Monto Real: <strong>{{ selectedExpense.real_amount | pandaCurrency }}</strong></p>
           </div>
           <div class="modal-footer">
             <button (click)="deleteBudgetExpense(selectedExpense.id!)" class="btn-pastel btn-delete-sm">Eliminar</button>
@@ -284,7 +346,6 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
         <div class="modal-card card-pastel">
           <div class="modal-header">
             <h3>💰 Agregar Nuevo Ingreso</h3>
-            <button (click)="closeIncomeModal()" class="close-btn">&times;</button>
           </div>
           <div class="modal-body">
             <div class="form-group">
@@ -309,245 +370,75 @@ import { MonthChallengeData, ChallengeDayProgress } from '../../../core/interfac
     </div>
   `,
   styles: [`
-    .month-container {
-      max-width: 1200px;
-      margin: 20px auto;
-      padding: 0 16px;
-    }
-    .month-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .tab-content {
-      padding: clamp(14px, 3vw, 24px);
-    }
-    .calendar-header-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .weeks-shortcut {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
+    .month-container { max-width: 1200px; margin: 20px auto; padding: 0 16px; }
+    .month-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .tab-content { padding: clamp(14px, 3vw, 24px); }
+    .calendar-header-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .weeks-shortcut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .week-pill {
-      background: #FFF0F4;
-      border: 1px solid #F4A6C1;
-      color: #D4566A;
-      padding: 6px 12px;
-      border-radius: 20px;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.8rem;
-      transition: all 0.2s ease;
+      background: #FFF0F4; border: 1px solid #F4A6C1; color: #D4566A; padding: 6px 12px; border-radius: 20px;
+      text-decoration: none; font-weight: 700; font-size: 0.8rem; transition: all 0.2s ease;
     }
-    .week-pill:hover {
-      background: #D4566A;
-      color: white;
-    }
-    /* CALENDARIO RESPONSIVO */
-    .calendar-grid-wrapper {
-      width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(80px, 1fr));
-      gap: 6px;
-      min-width: 580px;
-    }
-    .day-name {
-      text-align: center;
-      font-weight: 700;
-      color: #4A3F55;
-      padding: 6px;
-      background: #FFF0F4;
-      border-radius: 8px;
-      font-size: 0.85rem;
-    }
+    .week-pill:hover { background: #D4566A; color: white; }
+    .calendar-grid-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(80px, 1fr)); gap: 6px; min-width: 580px; }
+    .day-name { text-align: center; font-weight: 700; color: #4A3F55; padding: 6px; background: #FFF0F4; border-radius: 8px; font-size: 0.85rem; }
     .calendar-day-cell {
-      min-height: 90px;
-      background: #FFFFFF;
-      border: 1px solid rgba(244, 166, 193, 0.4);
-      border-radius: 10px;
-      padding: 6px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      transition: background 0.2s ease;
+      min-height: 95px; max-height: 125px; background: #FFFFFF; border: 1px solid rgba(244, 166, 193, 0.4); border-radius: 10px;
+      padding: 6px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: background 0.2s ease; overflow: hidden;
     }
-    .calendar-day-cell:hover:not(.empty-day) {
-      background: #FFF9FA;
-      border-color: #D4566A;
-    }
-    .empty-day {
-      background: #FAFAFA;
-      border-color: transparent;
-      cursor: default;
-    }
-    .day-number {
-      font-weight: 700;
-      font-size: 0.85rem;
-      color: #4A3F55;
-    }
+    .calendar-day-cell:hover:not(.empty-day) { background: #FFF9FA; border-color: #D4566A; }
+    .empty-day { background: #FAFAFA; border-color: transparent; cursor: default; }
+    .day-number { font-weight: 700; font-size: 0.85rem; color: #4A3F55; }
     .day-expenses {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: flex; flex-direction: column; gap: 4px; max-height: 85px; overflow-y: auto; padding-right: 2px;
     }
+    .day-expenses::-webkit-scrollbar { width: 3px; }
+    .day-expenses::-webkit-scrollbar-thumb { background: #F4A6C1; border-radius: 10px; }
     .expense-tag {
-      padding: 3px 5px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: #333;
-      display: flex;
-      align-items: center;
-      gap: 3px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      padding: 3px 5px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; color: #333;
+      display: flex; align-items: center; gap: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-
-    /* INGRESOS LAYOUT */
-    .incomes-layout {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 20px;
-    }
-    .section-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .data-table th, .data-table td {
-      padding: 10px;
-      border-bottom: 1px solid #FFF0F4;
-      font-size: 0.9rem;
-    }
-    .data-table th {
-      text-align: left;
-      background: #FFF0F4;
-      color: #4A3F55;
-    }
-    .savings-card {
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
+    .incomes-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .section-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th, .data-table td { padding: 10px; border-bottom: 1px solid #FFF0F4; font-size: 0.9rem; }
+    .data-table th { text-align: left; background: #FFF0F4; color: #4A3F55; }
+    .savings-card { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .savings-icon { font-size: 2.5rem; }
-    .saving-input-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      width: 100%;
-    }
+    .saving-input-group { display: flex; align-items: center; gap: 6px; width: 100%; }
     .currency-symbol { font-weight: 700; font-size: 1.1rem; }
-
-    /* RESUMEN TOTALES */
-    .totals-summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      margin-top: 20px;
-    }
-    .total-box {
-      padding: 14px;
-      border-radius: 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.9rem;
-    }
+    .totals-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 20px; }
+    .total-box { padding: 14px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.9rem; }
     .bg-ingresos { background: #EAF6F0; color: #1E4E36; }
     .bg-gastos { background: #FDEEF4; color: #6A1B3B; }
     .bg-ahorros { background: #FFF9EB; color: #5B4810; }
-
-    /* RETOS */
-    .challenge-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
+    .modal-header { margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1.5px dashed #F4A6C1; }
+    .modal-header h3 { font-size: 1.3rem; color: #D4566A; margin: 0; }
+    .challenge-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
     .challenge-icon-big { font-size: 3rem; }
-    .progress-bar-wrapper {
-      margin-bottom: 24px;
-    }
-    .progress-text {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      font-size: 0.9rem;
-    }
-    .progress-track {
-      height: 14px;
-      background: #FFF0F4;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #F4A6C1, #D4566A);
-      transition: width 0.4s ease;
-    }
-    .challenge-days-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
-      gap: 10px;
-    }
+    .progress-bar-wrapper { margin-bottom: 24px; }
+    .progress-text { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; }
+    .progress-track { height: 14px; background: #FFF0F4; border-radius: 10px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #F4A6C1, #D4566A); transition: width 0.4s ease; }
+    .challenge-days-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 10px; }
     .challenge-day-card {
-      background: #FFFFFF;
-      border: 2px solid #F4A6C1;
-      border-radius: 10px;
-      padding: 8px;
-      text-align: center;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      transition: all 0.2s ease;
-      font-size: 0.8rem;
+      background: #FFFFFF; border: 2px solid #F4A6C1; border-radius: 10px; padding: 8px; text-align: center;
+      cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: all 0.2s ease; font-size: 0.8rem;
     }
-    .challenge-day-card.completed {
-      background: #FFE5EC;
-      border-color: #D4566A;
-      transform: scale(1.03);
-    }
+    .challenge-day-card.completed { background: #FFE5EC; border-color: #D4566A; transform: scale(1.03); }
     .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
     .form-input { padding: 8px 12px; border-radius: 10px; border: 1.5px solid #F4A6C1; outline: none; font-size: 0.9rem; width: 100%; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
     .btn-icon-danger { background: none; border: none; color: #D4566A; cursor: pointer; font-size: 1rem; }
-    
-    @media (max-width: 900px) {
-      .incomes-layout { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 900px) { .incomes-layout { grid-template-columns: 1fr; } }
   `]
 })
 export class MonthLayoutComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private apiService = inject(ApiService);
+  private toastService = inject(ToastService);
 
   yearId!: number;
   monthId!: number;
@@ -564,11 +455,22 @@ export class MonthLayoutComponent implements OnInit {
   totalExpenses: number = 0;
   totalRemaining: number = 0;
 
+  paymentMethodsOverall: { method: string; total: number }[] = [];
+  categoryPaymentBreakdown: {
+    categoryId: number;
+    categoryName: string;
+    categoryIcon: string;
+    categoryColor: string;
+    total: number;
+    methods: { method: string; total: number }[];
+    expanded?: boolean;
+  }[] = [];
+
   showExpenseModal = false;
   showIncomeModal = false;
   selectedExpense: BudgetExpense | null = null;
 
-  newExpense: Partial<BudgetExpense> = { budget_amount: 0, concept: '' };
+  newExpense: Partial<BudgetExpense> = { budget_amount: 0, concept: '', payment_method: '' };
   newIncome: Partial<Income> = { amount: 0, concept: '' };
 
   ngOnInit(): void {
@@ -605,6 +507,78 @@ export class MonthLayoutComponent implements OnInit {
     
     this.totalExpenses = budgetSum + extraSum;
     this.totalRemaining = this.totalIncomes - this.totalExpenses - this.monthSaving;
+
+    this.calculatePaymentMethodBreakdown();
+  }
+
+  calculatePaymentMethodBreakdown(): void {
+    if (!this.monthDetails) return;
+
+    const budgetExpenses: BudgetExpense[] = this.monthDetails.budgetExpenses || [];
+    const extraExpenses: ExtraExpense[] = this.monthDetails.extraExpenses || [];
+
+    const categoryMap = new Map<number, {
+      categoryId: number;
+      categoryName: string;
+      categoryIcon: string;
+      categoryColor: string;
+      total: number;
+      methodsMap: Map<string, number>;
+    }>();
+
+    const overallMethodsMap = new Map<string, number>();
+
+    const processExpense = (exp: any, isExtra = false) => {
+      const catId = exp.category_id;
+      const catName = exp.category_name || 'Sin Categoría';
+      const catIcon = exp.category_icon || '🏷️';
+      const catColor = exp.category_color || '#E8A0BF';
+      const rawMethod = exp.payment_method ? exp.payment_method.trim() : '';
+      const method = rawMethod ? rawMethod : 'Sin especificar';
+      const amount = isExtra 
+        ? parseFloat(exp.amount || 0)
+        : (exp.real_amount && parseFloat(exp.real_amount) > 0 ? parseFloat(exp.real_amount) : parseFloat(exp.budget_amount || 0));
+
+      if (!amount || isNaN(amount)) return;
+
+      overallMethodsMap.set(method, (overallMethodsMap.get(method) || 0) + amount);
+
+      if (!categoryMap.has(catId)) {
+        categoryMap.set(catId, {
+          categoryId: catId,
+          categoryName: catName,
+          categoryIcon: catIcon,
+          categoryColor: catColor,
+          total: 0,
+          methodsMap: new Map<string, number>()
+        });
+      }
+
+      const catData = categoryMap.get(catId)!;
+      catData.total += amount;
+      catData.methodsMap.set(method, (catData.methodsMap.get(method) || 0) + amount);
+    };
+
+    budgetExpenses.forEach(e => processExpense(e, false));
+    extraExpenses.forEach(e => processExpense(e, true));
+
+    this.paymentMethodsOverall = Array.from(overallMethodsMap.entries()).map(([method, total]) => ({ method, total }));
+
+    const existingExpandedState = new Map(this.categoryPaymentBreakdown.map(c => [c.categoryId, c.expanded]));
+
+    this.categoryPaymentBreakdown = Array.from(categoryMap.values()).map(cat => ({
+      categoryId: cat.categoryId,
+      categoryName: cat.categoryName,
+      categoryIcon: cat.categoryIcon,
+      categoryColor: cat.categoryColor,
+      total: cat.total,
+      methods: Array.from(cat.methodsMap.entries()).map(([method, total]) => ({ method, total })),
+      expanded: existingExpandedState.get(cat.categoryId) ?? false
+    }));
+  }
+
+  toggleCategoryBreakdown(cat: any): void {
+    cat.expanded = !cat.expanded;
   }
 
   generateCalendarGrid(): void {
@@ -656,7 +630,8 @@ export class MonthLayoutComponent implements OnInit {
       date: dateStr,
       category_id: this.categories[0]?.id || 1,
       concept: '',
-      budget_amount: 0
+      budget_amount: 0,
+      payment_method: ''
     };
     this.showExpenseModal = true;
   }
@@ -664,8 +639,12 @@ export class MonthLayoutComponent implements OnInit {
   closeExpenseModal(): void { this.showExpenseModal = false; }
 
   saveBudgetExpense(): void {
-    if (!this.newExpense.concept || !this.newExpense.budget_amount) return;
+    if (!this.newExpense.concept || !this.newExpense.budget_amount) {
+      this.toastService.warning('Por favor ingresa concepto y monto');
+      return;
+    }
     this.apiService.createBudgetExpense(this.newExpense as BudgetExpense).subscribe(() => {
+      this.toastService.success('Gasto presupuestado agregado 🌸');
       this.closeExpenseModal();
       this.loadMonthData();
     });
@@ -673,8 +652,12 @@ export class MonthLayoutComponent implements OnInit {
 
   openDetailPopup(exp: BudgetExpense): void { this.selectedExpense = exp; }
 
-  deleteBudgetExpense(id: number): void {
+  async deleteBudgetExpense(id: number): Promise<void> {
+    const confirmed = await this.toastService.confirm('¿Deseas eliminar este gasto presupuestado?');
+    if (!confirmed) return;
+
     this.apiService.deleteBudgetExpense(id).subscribe(() => {
+      this.toastService.success('Gasto eliminado');
       this.selectedExpense = null;
       this.loadMonthData();
     });
@@ -689,20 +672,37 @@ export class MonthLayoutComponent implements OnInit {
   closeIncomeModal(): void { this.showIncomeModal = false; }
 
   saveIncome(): void {
-    if (!this.newIncome.concept || !this.newIncome.amount) return;
+    if (!this.newIncome.concept || !this.newIncome.amount) {
+      this.toastService.warning('Por favor ingresa concepto y valor del ingreso');
+      return;
+    }
     this.apiService.createIncome(this.newIncome as Income).subscribe(() => {
+      this.toastService.success('Ingreso registrado 💰');
       this.closeIncomeModal();
       this.loadMonthData();
     });
   }
 
-  deleteIncome(id: number): void {
-    this.apiService.deleteIncome(id).subscribe(() => this.loadMonthData());
+  async deleteIncome(id: number): Promise<void> {
+    const confirmed = await this.toastService.confirm('¿Deseas eliminar este ingreso?');
+    if (!confirmed) return;
+
+    this.apiService.deleteIncome(id).subscribe(() => {
+      this.toastService.success('Ingreso eliminado');
+      this.loadMonthData();
+    });
   }
 
   saveMonthSaving(): void {
     this.apiService.setMonthSaving(this.monthId, this.monthSaving).subscribe(() => {
+      this.toastService.success('Meta de ahorro guardada 🪙');
       this.calculateTotals();
     });
   }
+
+  trackById(index: number, item: any): number { return item.id; }
+  trackByWeekId(index: number, w: Week): number { return w.id; }
+  trackByDateStr(index: number, item: any): string { return item.dateStr + '_' + index; }
+  trackByCatRowId(index: number, catRow: any): number { return catRow.categoryId; }
+  trackByDayNum(index: number, day: ChallengeDayProgress): number { return day.day; }
 }
