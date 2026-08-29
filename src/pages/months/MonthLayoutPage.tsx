@@ -154,9 +154,7 @@ export const MonthLayoutPage: React.FC = () => {
     const realBreakdown = buildBreakdown((exp, isExtra) => {
       if (isExtra) return parseFloat(exp.amount || 0);
       const realAmt = parseFloat(exp.real_amount);
-      return realAmt != null && !isNaN(realAmt) && realAmt > 0
-        ? realAmt
-        : parseFloat(exp.budget_amount || 0);
+      return !isNaN(realAmt) ? realAmt : 0;
     });
 
     setPaymentMethodsOverall(realBreakdown.methods);
