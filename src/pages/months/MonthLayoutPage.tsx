@@ -73,8 +73,7 @@ export const MonthLayoutPage: React.FC = () => {
     const budgetSum = (data.budgetExpenses || []).reduce(
       (sum: number, e: BudgetExpense) => {
         const realAmt = parseFloat(e.real_amount as any);
-        const budgetAmt = parseFloat(e.budget_amount as any || 0);
-        return sum + (realAmt != null && !isNaN(realAmt) && realAmt > 0 ? realAmt : budgetAmt);
+        return sum + (!isNaN(realAmt) ? realAmt : 0);
       },
       0
     );
