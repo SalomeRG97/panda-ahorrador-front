@@ -5,6 +5,59 @@ import { useToast } from '../../context/ToastContext';
 import { Category, BudgetExpense, ExtraExpense, CategoryWeekTotal, PaymentMethodWeekTotal, Week } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 
+interface AmountInputProps {
+  value: number | undefined | null;
+  onSave: (val: number) => void;
+  className?: string;
+  placeholder?: string;
+}
+
+const AmountInputCell: React.FC<AmountInputProps> = ({
+  value,
+  onSave,
+  className = 'table-input input-real-value',
+  placeholder = '$ 0',
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const [text, setText] = useState('');
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(true);
+    const rawVal = value != null && value > 0 ? String(value) : '';
+    setText(rawVal);
+    setTimeout(() => e.target.select(), 10);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned) || 0;
+    if (num !== (value ?? 0)) {
+      onSave(num);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={isFocused ? text : value != null && value > 0 ? formatCurrency(value) : ''}
+      onChange={(e) => setText(e.target.value)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+};
+
 export const WeekDetailPage: React.FC = () => {
   const { yearId, monthId, weekId } = useParams<{ yearId: string; monthId: string; weekId: string }>();
   const navigate = useNavigate();
@@ -305,11 +358,9 @@ export const WeekDetailPage: React.FC = () => {
                   </td>
                   <td className="font-bold">{formatCurrency(b.budget_amount)}</td>
                   <td>
-                    <input
-                      type="number"
-                      value={b.real_amount ?? ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
+                    <AmountInputCell
+                      value={b.real_amount}
+                      onSave={async (val) => {
                         const updated = { ...b, real_amount: val };
                         setWeekData((prev) =>
                           prev
@@ -319,7 +370,12 @@ export const WeekDetailPage: React.FC = () => {
                               }
                             : null
                         );
-                        queueBudgetUpdate(updated);
+                        try {
+                          await ApiService.updateBudgetExpense(b.id!, updated);
+                          loadWeekData();
+                        } catch (err) {
+                          console.error('Error al actualizar gasto presupuestado:', err);
+                        }
                       }}
                       className="table-input input-real-value"
                       placeholder="$ 0"
@@ -455,11 +511,9 @@ export const WeekDetailPage: React.FC = () => {
                     />
                   </td>
                   <td>
-                    <input
-                      type="number"
-                      value={ext.amount ?? ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
+                    <AmountInputCell
+                      value={ext.amount}
+                      onSave={async (val) => {
                         const updated = { ...ext, amount: val };
                         setWeekData((prev) =>
                           prev
@@ -469,7 +523,12 @@ export const WeekDetailPage: React.FC = () => {
                               }
                             : null
                         );
-                        queueExtraUpdate(updated);
+                        try {
+                          await ApiService.updateExtraExpense(ext.id!, updated);
+                          loadWeekData();
+                        } catch (err) {
+                          console.error('Error al actualizar gasto extra:', err);
+                        }
                       }}
                       className="table-input input-real-value"
                       placeholder="$ 0"
