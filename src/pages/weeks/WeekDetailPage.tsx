@@ -94,6 +94,12 @@ export const WeekDetailPage: React.FC = () => {
     const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
     if (!confirmed) return;
 
+    // Cancelar cualquier debounce timer pendiente para este gasto
+    if (budgetUpdateDebounceRef.current[id]) {
+      clearTimeout(budgetUpdateDebounceRef.current[id]);
+      delete budgetUpdateDebounceRef.current[id];
+    }
+
     try {
       await ApiService.deleteBudgetExpense(id);
       success('Gasto presupuestado eliminado');
@@ -106,6 +112,12 @@ export const WeekDetailPage: React.FC = () => {
   const deleteExtraRow = async (id: number) => {
     const confirmed = await confirm('¿Deseas eliminar este gasto extra?');
     if (!confirmed) return;
+
+    // Cancelar cualquier debounce timer pendiente para este gasto
+    if (extraUpdateDebounceRef.current[id]) {
+      clearTimeout(extraUpdateDebounceRef.current[id]);
+      delete extraUpdateDebounceRef.current[id];
+    }
 
     try {
       await ApiService.deleteExtraExpense(id);

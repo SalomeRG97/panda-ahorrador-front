@@ -41,6 +41,21 @@ export const MonthLayoutPage: React.FC = () => {
     }[]
   >([]);
 
+  // Estados para desglose presupuestado (colapsable)
+  const [showBudgetBreakdown, setShowBudgetBreakdown] = useState(false);
+  const [budgetPaymentMethodsOverall, setBudgetPaymentMethodsOverall] = useState<{ method: string; total: number }[]>([]);
+  const [budgetCategoryPaymentBreakdown, setBudgetCategoryPaymentBreakdown] = useState<
+    {
+      categoryId: number;
+      categoryName: string;
+      categoryIcon: string;
+      categoryColor: string;
+      total: number;
+      methods: { method: string; total: number }[];
+      expanded?: boolean;
+    }[]
+  >([]);
+
   // Modales
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showIncomeModal, setShowIncomeModal] = useState(false);
@@ -56,7 +71,11 @@ export const MonthLayoutPage: React.FC = () => {
     if (!data) return;
     const incTotal = (data.incomes || []).reduce((sum: number, i: Income) => sum + parseFloat(i.amount as any || 0), 0);
     const budgetSum = (data.budgetExpenses || []).reduce(
-      (sum: number, e: BudgetExpense) => sum + parseFloat(e.real_amount || e.budget_amount as any || 0),
+      (sum: number, e: BudgetExpense) => {
+        const realAmt = parseFloat(e.real_amount as any);
+        const budgetAmt = parseFloat(e.budget_amount as any || 0);
+        return sum + (realAmt != null && !isNaN(realAmt) && realAmt > 0 ? realAmt : budgetAmt);
+      },
       0
     );
     const extraSum = (data.extraExpenses || []).reduce((sum: number, e: ExtraExpense) => sum + parseFloat(e.amount as any || 0), 0);
@@ -68,64 +87,57 @@ export const MonthLayoutPage: React.FC = () => {
     setTotalExpenses(expTotal);
     setTotalRemaining(incTotal - expTotal - saving);
 
-    // Payment methods breakdown
+    // Payment methods breakdown (Real / Gastado)
     const budgetExpenses: BudgetExpense[] = data.budgetExpenses || [];
     const extraExpenses: ExtraExpense[] = data.extraExpenses || [];
 
-    const categoryMap = new Map<
-      number,
-      {
-        categoryId: number;
-        categoryName: string;
-        categoryIcon: string;
-        categoryColor: string;
-        total: number;
-        methodsMap: Map<string, number>;
-      }
-    >();
-
-    const overallMethodsMap = new Map<string, number>();
-
-    const processExpense = (exp: any, isExtra = false) => {
-      const catId = exp.category_id;
-      const catName = exp.category_name || 'Sin Categoría';
-      const catIcon = exp.category_icon || '🏷️';
-      const catColor = exp.category_color || '#E8A0BF';
-      const rawMethod = exp.payment_method ? exp.payment_method.trim() : '';
-      const method = rawMethod ? rawMethod : 'Sin especificar';
-      const amount = isExtra
-        ? parseFloat(exp.amount || 0)
-        : exp.real_amount && parseFloat(exp.real_amount) > 0
-        ? parseFloat(exp.real_amount)
-        : parseFloat(exp.budget_amount || 0);
-
-      if (!amount || isNaN(amount)) return;
-
-      overallMethodsMap.set(method, (overallMethodsMap.get(method) || 0) + amount);
-
-      if (!categoryMap.has(catId)) {
-        categoryMap.set(catId, {
-          categoryId: catId,
-          categoryName: catName,
-          categoryIcon: catIcon,
-          categoryColor: catColor,
-          total: 0,
-          methodsMap: new Map<string, number>(),
-        });
-      }
-
-      const catData = categoryMap.get(catId)!;
-      catData.total += amount;
-      catData.methodsMap.set(method, (catData.methodsMap.get(method) || 0) + amount);
+    type CatAccum = {
+      categoryId: number;
+      categoryName: string;
+      categoryIcon: string;
+      categoryColor: string;
+      total: number;
+      methodsMap: Map<string, number>;
     };
 
-    budgetExpenses.forEach((e) => processExpense(e, false));
-    extraExpenses.forEach((e) => processExpense(e, true));
+    const buildBreakdown = (getAmount: (exp: any, isExtra: boolean) => number) => {
+      const categoryMap = new Map<number, CatAccum>();
+      const overallMethodsMap = new Map<string, number>();
 
-    setPaymentMethodsOverall(Array.from(overallMethodsMap.entries()).map(([method, total]) => ({ method, total })));
+      const processExpense = (exp: any, isExtra = false) => {
+        const catId = exp.category_id;
+        const catName = exp.category_name || 'Sin Categoría';
+        const catIcon = exp.category_icon || '🏷️';
+        const catColor = exp.category_color || '#E8A0BF';
+        const rawMethod = exp.payment_method ? exp.payment_method.trim() : '';
+        const method = rawMethod ? rawMethod : 'Sin especificar';
+        const amount = getAmount(exp, isExtra);
 
-    setCategoryPaymentBreakdown(
-      Array.from(categoryMap.values()).map((cat) => ({
+        if (!amount || isNaN(amount)) return;
+
+        overallMethodsMap.set(method, (overallMethodsMap.get(method) || 0) + amount);
+
+        if (!categoryMap.has(catId)) {
+          categoryMap.set(catId, {
+            categoryId: catId,
+            categoryName: catName,
+            categoryIcon: catIcon,
+            categoryColor: catColor,
+            total: 0,
+            methodsMap: new Map<string, number>(),
+          });
+        }
+
+        const catData = categoryMap.get(catId)!;
+        catData.total += amount;
+        catData.methodsMap.set(method, (catData.methodsMap.get(method) || 0) + amount);
+      };
+
+      budgetExpenses.forEach((e) => processExpense(e, false));
+      extraExpenses.forEach((e) => processExpense(e, true));
+
+      const methods = Array.from(overallMethodsMap.entries()).map(([method, total]) => ({ method, total }));
+      const categories = Array.from(categoryMap.values()).map((cat) => ({
         categoryId: cat.categoryId,
         categoryName: cat.categoryName,
         categoryIcon: cat.categoryIcon,
@@ -133,8 +145,31 @@ export const MonthLayoutPage: React.FC = () => {
         total: cat.total,
         methods: Array.from(cat.methodsMap.entries()).map(([method, total]) => ({ method, total })),
         expanded: false,
-      }))
-    );
+      }));
+
+      return { methods, categories };
+    };
+
+    // Desglose REAL (gastos reales / lo que se gastó)
+    const realBreakdown = buildBreakdown((exp, isExtra) => {
+      if (isExtra) return parseFloat(exp.amount || 0);
+      const realAmt = parseFloat(exp.real_amount);
+      return realAmt != null && !isNaN(realAmt) && realAmt > 0
+        ? realAmt
+        : parseFloat(exp.budget_amount || 0);
+    });
+
+    setPaymentMethodsOverall(realBreakdown.methods);
+    setCategoryPaymentBreakdown(realBreakdown.categories);
+
+    // Desglose PRESUPUESTADO (solo budget_amount, sin usar real_amount)
+    const budgetBreakdown = buildBreakdown((exp, isExtra) => {
+      if (isExtra) return parseFloat(exp.amount || 0);
+      return parseFloat(exp.budget_amount || 0);
+    });
+
+    setBudgetPaymentMethodsOverall(budgetBreakdown.methods);
+    setBudgetCategoryPaymentBreakdown(budgetBreakdown.categories);
   };
 
   const generateCalendarGrid = (data: any) => {
@@ -166,6 +201,11 @@ export const MonthLayoutPage: React.FC = () => {
         setMonthSaving(data.saving || 0);
         calculateTotals(data);
         generateCalendarGrid(data);
+
+        // Refrescar weeklyBreakdown si estamos en la pestaña de resumen
+        if (activeTab === 'summary') {
+          ApiService.getMonthWeeklyCategoryBreakdown(mId).then(setWeeklyBreakdown).catch(console.error);
+        }
       })
       .catch((err) => error(err.response?.data?.message || 'Error al cargar detalles del mes'));
   };
@@ -193,6 +233,12 @@ export const MonthLayoutPage: React.FC = () => {
 
   const toggleCategoryBreakdown = (categoryId: number) => {
     setCategoryPaymentBreakdown((prev) =>
+      prev.map((c) => (c.categoryId === categoryId ? { ...c, expanded: !c.expanded } : c))
+    );
+  };
+
+  const toggleBudgetCategoryBreakdown = (categoryId: number) => {
+    setBudgetCategoryPaymentBreakdown((prev) =>
       prev.map((c) => (c.categoryId === categoryId ? { ...c, expanded: !c.expanded } : c))
     );
   };
@@ -628,6 +674,87 @@ export const MonthLayoutPage: React.FC = () => {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* SECCIÓN COLAPSABLE: DESGLOSE PRESUPUESTADO */}
+          <div style={{ marginTop: '40px', borderTop: '2px solid #F4A6C1', paddingTop: '20px' }}>
+            <button
+              onClick={() => setShowBudgetBreakdown(!showBudgetBreakdown)}
+              className="btn-pastel btn-secondary-pastel"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 auto 20px', fontSize: '1rem', padding: '10px 24px' }}
+            >
+              <i className={`fa-solid fa-chevron-${showBudgetBreakdown ? 'up' : 'down'}`}></i>
+              📊 {showBudgetBreakdown ? 'Ocultar' : 'Ver'} Desglose Presupuestado
+            </button>
+
+            {showBudgetBreakdown && (
+              <div className="animate-fade-in-up">
+                <h3 style={{ marginBottom: '16px', color: '#5A82E6' }}>📋 Totalización de Montos Presupuestados por Medio de Pago</h3>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '1.05rem', color: '#4A3F55', marginBottom: '12px' }}>Totales Generales por Tipo de Pago (Presupuestado)</h4>
+                  {budgetPaymentMethodsOverall.length > 0 ? (
+                    <div className="totals-summary-grid">
+                      {budgetPaymentMethodsOverall.map((pm, idx) => (
+                        <div key={idx} className="total-box" style={{ background: '#F0F4FF', border: '1.5px solid #5A82E6', color: '#4A3F55' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>💳 {pm.method}</span>
+                          <strong style={{ color: '#5A82E6', fontSize: '1.15rem' }}>{formatCurrency(pm.total)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: '#8C7B99', fontStyle: 'italic', fontSize: '0.9rem' }}>No hay montos presupuestados con medio de pago para este mes.</p>
+                  )}
+                </div>
+
+                {/* DETALLE DESPLEGABLE POR CATEGORÍA (PRESUPUESTADO) */}
+                <div style={{ marginTop: '20px' }}>
+                  <h4 style={{ fontSize: '1.05rem', color: '#4A3F55', marginBottom: '12px' }}>Desglose por Categoría — Presupuestado (Clic para desplegar)</h4>
+                  <div className="category-payment-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {budgetCategoryPaymentBreakdown.map((catRow) => (
+                      <div key={catRow.categoryId} className="card-pastel" style={{ padding: '14px 18px', margin: 0, background: '#F8F9FF' }}>
+                        <div
+                          onClick={() => toggleBudgetCategoryBreakdown(catRow.categoryId)}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <span className="badge-category" style={{ backgroundColor: catRow.categoryColor }}>
+                              {catRow.categoryIcon} {catRow.categoryName}
+                            </span>
+                            <span style={{ fontSize: '0.85rem', color: '#8C7B99', fontWeight: 600 }}>({catRow.methods.length} medios de pago)</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <strong style={{ color: '#5A82E6', fontSize: '1rem' }}>{formatCurrency(catRow.total)}</strong>
+                            <span style={{ fontSize: '0.9rem', color: '#5A82E6', fontWeight: 'bold' }}>{catRow.expanded ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+
+                        {catRow.expanded && (
+                          <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px dashed #5A82E6' }}>
+                            <table className="data-table" style={{ fontSize: '0.85rem' }}>
+                              <thead>
+                                <tr>
+                                  <th>Medio de Pago</th>
+                                  <th>Total Presupuestado</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {catRow.methods.map((m, idx) => (
+                                  <tr key={idx}>
+                                    <td>💳 <strong>{m.method}</strong></td>
+                                    <td style={{ color: '#5A82E6', fontWeight: 700 }}>{formatCurrency(m.total)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
