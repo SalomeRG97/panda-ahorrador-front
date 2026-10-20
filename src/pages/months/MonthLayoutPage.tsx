@@ -84,7 +84,7 @@ export const MonthLayoutPage: React.FC = () => {
     const saving = data.saving || 0;
 
     // Gastos pagados con ahorros: no descuentan del dinero libre del mes
-    const isFromSavings = (pm?: string) => (pm || '').trim().toLowerCase() === 'ahorros';
+    const isFromSavings = (pm?: string) => (pm || '').trim().toLowerCase() === 'retiro de ahorros';
     const withdrawn =
       (data.budgetExpenses || []).reduce(
         (sum: number, e: BudgetExpense) =>
@@ -567,7 +567,7 @@ export const MonthLayoutPage: React.FC = () => {
                 {' · '}Ahorro neto: <strong>{formatCurrency(monthSaving - savingsWithdrawn)}</strong>
               </p>
               <p style={{ fontSize: '0.75rem', margin: 0, opacity: 0.7 }}>
-                Para retirar, registra un gasto con medio de pago «Ahorros».
+                Para retirar, registra un gasto con medio de pago «Retiro de Ahorros».
               </p>
             </div>
           </div>
@@ -863,11 +863,11 @@ export const MonthLayoutPage: React.FC = () => {
                   list="payment-method-options"
                   value={newExpense.payment_method || ''}
                   onChange={(e) => setNewExpense({ ...newExpense, payment_method: e.target.value })}
-                  placeholder="Ej: Débito, Efectivo, Ahorros"
+                  placeholder="Ej: Débito, Efectivo, Retiro de Ahorros"
                   className="form-input"
                 />
                 <datalist id="payment-method-options">
-                  <option value="Ahorros" />
+                  <option value="Retiro de Ahorros" />
                   <option value="Efectivo" />
                   <option value="Débito" />
                   <option value="Crédito" />

@@ -221,7 +221,7 @@ export const WeekDetailPage: React.FC = () => {
   return (
     <div className="week-container animate-fade-in-up">
       <datalist id="payment-method-options">
-        <option value="Ahorros" />
+        <option value="Retiro de Ahorros" />
         <option value="Efectivo" />
         <option value="Débito" />
         <option value="Crédito" />
@@ -673,7 +673,7 @@ export const WeekDetailPage: React.FC = () => {
                   list="payment-method-options"
                   value={newExtra.payment_method || ''}
                   onChange={(e) => setNewExtra({ ...newExtra, payment_method: e.target.value })}
-                  placeholder="Ej: Tarjeta débito, Efectivo, Ahorros"
+                  placeholder="Ej: Tarjeta débito, Efectivo, Retiro de Ahorros"
                   className="form-input"
                 />
               </div>
