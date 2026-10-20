@@ -859,6 +859,12 @@ export const MonthLayoutPage: React.FC = () => {
                   <h4 style={{ fontSize: '1.05rem', color: '#4A3F55', marginBottom: '12px' }}>Totales Generales por Tipo de Pago (Presupuestado)</h4>
                   {budgetPaymentMethodsOverall.length > 0 ? (
                     <div className="totals-summary-grid">
+                      <div className="total-box" style={{ background: '#5A82E6', color: '#FFFFFF' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🧾 Total General Presupuestado</span>
+                        <strong style={{ fontSize: '1.25rem' }}>
+                          {formatCurrency(budgetPaymentMethodsOverall.reduce((sum, pm) => sum + pm.total, 0))}
+                        </strong>
+                      </div>
                       {budgetPaymentMethodsOverall.map((pm, idx) => (
                         <div key={idx} className="total-box" style={{ background: '#F0F4FF', border: '1.5px solid #5A82E6', color: '#4A3F55' }}>
                           <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>💳 {pm.method}</span>
