@@ -14,6 +14,7 @@ import {
   CategoryChartData,
   TodayShortcuts,
   PendingBudgetExpense,
+  RecurrenceScope,
 } from '../types';
 
 export const ApiService = {
@@ -118,17 +119,17 @@ export const ApiService = {
     return res.data.data;
   },
 
-  async updateBudgetExpense(id: number, expense: Partial<BudgetExpense>): Promise<boolean> {
-    const res = await api.put<{ success: boolean }>(`/expenses/budget/${id}`, expense);
+  async updateBudgetExpense(id: number, expense: Partial<BudgetExpense>, scope: RecurrenceScope = 'single'): Promise<boolean> {
+    const res = await api.put<{ success: boolean }>(`/expenses/budget/${id}`, { ...expense, scope });
     return res.data.success;
   },
 
-  async deleteBudgetExpense(id: number): Promise<boolean> {
-    const res = await api.delete<{ success: boolean }>(`/expenses/budget/${id}`);
+  async deleteBudgetExpense(id: number, scope: RecurrenceScope = 'single'): Promise<boolean> {
+    const res = await api.delete<{ success: boolean }>(`/expenses/budget/${id}`, { params: { scope } });
     return res.data.success;
   },
 
-  // Elimina este gasto recurrente y todos los siguientes
+  // Elimina este gasto recurrente y todos los siguientes (compatibilidad)
   async deleteBudgetExpenseSeries(id: number): Promise<boolean> {
     const res = await api.delete<{ success: boolean }>(`/expenses/budget/${id}/series`);
     return res.data.success;

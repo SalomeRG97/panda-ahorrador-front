@@ -2,9 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ApiService } from '../../services/api.service';
 import { useToast } from '../../context/ToastContext';
-import { Category, BudgetExpense, ExtraExpense, CategoryWeekTotal, PaymentMethodWeekTotal, Week } from '../../types';
+import { Category, BudgetExpense, ExtraExpense, CategoryWeekTotal, PaymentMethodWeekTotal, Week, RecurrenceScope } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { PaymentMethodSelect } from '../../components/PaymentMethodSelect';
+import { RecurrenceScopeModal } from '../../components/common/RecurrenceScopeModal';
 
 interface AmountInputProps {
   value: number | undefined | null;
@@ -83,6 +84,18 @@ export const WeekDetailPage: React.FC = () => {
   const [newExtra, setNewExtra] = useState<Partial<ExtraExpense>>({ amount: 0, concept: '', payment_method: '' });
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
+  const [editingBudgetExpense, setEditingBudgetExpense] = useState<BudgetExpense | null>(null);
+  const [showEditBudgetModal, setShowEditBudgetModal] = useState(false);
+  const [recurrenceModal, setRecurrenceModal] = useState<{
+    isOpen: boolean;
+    action: 'edit' | 'delete';
+    expense?: BudgetExpense;
+    pendingUpdateData?: Partial<BudgetExpense>;
+  }>({
+    isOpen: false,
+    action: 'delete',
+  });
+
   const { success, error, warning, confirm } = useToast();
 
   const budgetUpdateDebounceRef = useRef<{ [id: number]: any }>({});
@@ -160,21 +173,21 @@ export const WeekDetailPage: React.FC = () => {
   };
 
   const deleteBudgetRow = async (b: BudgetExpense) => {
-    const id = b.id!;
-    let deleteSeries = false;
     if (b.recurrence_id) {
-      deleteSeries = await confirm(
-        'Este gasto es recurrente. ¿Eliminar este y todos los siguientes? (Si cancelas, podrás eliminar solo este)'
-      );
-      if (!deleteSeries) {
-        const onlyThis = await confirm('¿Eliminar solo este gasto? Los demás se mantienen.');
-        if (!onlyThis) return;
-      }
-    } else {
-      const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
-      if (!confirmed) return;
+      setRecurrenceModal({
+        isOpen: true,
+        action: 'delete',
+        expense: b,
+      });
+      return;
     }
 
+    const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
+    if (!confirmed) return;
+    await executeDeleteBudgetRow(b.id!, 'single');
+  };
+
+  const executeDeleteBudgetRow = async (id: number, scope: RecurrenceScope) => {
     // Cancelar cualquier debounce timer pendiente para este gasto
     if (budgetUpdateDebounceRef.current[id]) {
       clearTimeout(budgetUpdateDebounceRef.current[id]);
@@ -182,16 +195,70 @@ export const WeekDetailPage: React.FC = () => {
     }
 
     try {
-      if (deleteSeries) {
-        await ApiService.deleteBudgetExpenseSeries(id);
-        success('Serie eliminada desde esta fecha');
+      await ApiService.deleteBudgetExpense(id, scope);
+      if (scope === 'all') {
+        success('Toda la serie recurrente ha sido eliminada 🌸');
+      } else if (scope === 'future') {
+        success('Gasto y repeticiones futuras eliminadas');
       } else {
-        await ApiService.deleteBudgetExpense(id);
         success('Gasto presupuestado eliminado');
       }
+      setRecurrenceModal((prev) => ({ ...prev, isOpen: false }));
       loadWeekData();
     } catch (err: any) {
       error(err.response?.data?.message || 'Error al eliminar gasto');
+    }
+  };
+
+  const openEditBudgetModal = (b: BudgetExpense) => {
+    setEditingBudgetExpense({ ...b });
+    setShowEditBudgetModal(true);
+  };
+
+  const handleSaveEditedBudget = async () => {
+    if (!editingBudgetExpense || !editingBudgetExpense.id) return;
+    if (!editingBudgetExpense.concept || !editingBudgetExpense.budget_amount) {
+      warning('Por favor ingresa concepto y monto presupuestado');
+      return;
+    }
+
+    if (editingBudgetExpense.recurrence_id) {
+      setRecurrenceModal({
+        isOpen: true,
+        action: 'edit',
+        expense: editingBudgetExpense,
+        pendingUpdateData: editingBudgetExpense,
+      });
+      return;
+    }
+
+    await executeSaveEditedBudget(editingBudgetExpense.id, editingBudgetExpense, 'single');
+  };
+
+  const executeSaveEditedBudget = async (id: number, data: Partial<BudgetExpense>, scope: RecurrenceScope) => {
+    try {
+      await ApiService.updateBudgetExpense(id, data, scope);
+      if (scope === 'all') {
+        success('Todas las repeticiones fueron actualizadas 🌸');
+      } else if (scope === 'future') {
+        success('Repeticiones futuras actualizadas 🌸');
+      } else {
+        success('Gasto presupuestado actualizado 🌸');
+      }
+      setShowEditBudgetModal(false);
+      setEditingBudgetExpense(null);
+      setRecurrenceModal((prev) => ({ ...prev, isOpen: false }));
+      loadWeekData();
+    } catch (err: any) {
+      error(err.response?.data?.message || 'Error al actualizar gasto presupuestado');
+    }
+  };
+
+  const handleRecurrenceScopeSelect = (scope: RecurrenceScope) => {
+    if (recurrenceModal.action === 'edit' && recurrenceModal.expense?.id && recurrenceModal.pendingUpdateData) {
+      executeSaveEditedBudget(recurrenceModal.expense.id, recurrenceModal.pendingUpdateData, scope);
+    } else if (recurrenceModal.action === 'delete' && recurrenceModal.expense?.id) {
+      executeDeleteBudgetRow(recurrenceModal.expense.id, scope);
     }
   };
 
@@ -417,13 +484,36 @@ export const WeekDetailPage: React.FC = () => {
                     />
                   </td>
                   <td>
-                    <button
-                      onClick={() => deleteBudgetRow(b)}
-                      className="btn-icon-danger"
-                      title={b.recurrence_id ? 'Eliminar (gasto recurrente)' : 'Eliminar'}
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => openEditBudgetModal(b)}
+                        className="btn-icon-secondary"
+                        style={{
+                          background: '#FFF0F4',
+                          border: '1px solid #F4A6C1',
+                          color: '#D4566A',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.88rem',
+                          transition: 'all 0.2s ease',
+                        }}
+                        title={b.recurrence_id ? 'Editar (gasto recurrente)' : 'Editar'}
+                      >
+                        <i className="fa-solid fa-pen"></i>
+                      </button>
+                      <button
+                        onClick={() => deleteBudgetRow(b)}
+                        className="btn-icon-danger"
+                        title={b.recurrence_id ? 'Eliminar (gasto recurrente)' : 'Eliminar'}
+                      >
+                        <i className="fa-solid fa-trash"></i>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -726,6 +816,102 @@ export const WeekDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL EDITAR GASTO PRESUPUESTADO */}
+      {showEditBudgetModal && editingBudgetExpense && (
+        <div className="modal-overlay" onClick={() => setShowEditBudgetModal(false)}>
+          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>✏️ Editar Gasto Presupuestado</h3>
+              {editingBudgetExpense.recurrence_id && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#8C7B99' }}>
+                  🔁 Este gasto es parte de una serie recurrente
+                </p>
+              )}
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Fecha:</label>
+                <input
+                  type="date"
+                  value={editingBudgetExpense.date || ''}
+                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, date: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Categoría:</label>
+                <select
+                  value={editingBudgetExpense.category_id}
+                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, category_id: parseInt(e.target.value) })}
+                  className="form-input"
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.icon} {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Concepto / Detalle:</label>
+                <input
+                  type="text"
+                  value={editingBudgetExpense.concept || ''}
+                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, concept: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Medio de Pago:</label>
+                <PaymentMethodSelect
+                  value={editingBudgetExpense.payment_method || ''}
+                  methods={paymentMethods}
+                  onChange={(pm) => setEditingBudgetExpense({ ...editingBudgetExpense, payment_method: pm })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Monto Presupuestado ($):</label>
+                <input
+                  type="number"
+                  value={editingBudgetExpense.budget_amount || ''}
+                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, budget_amount: parseFloat(e.target.value) || 0 })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Valor Real Gastado ($) (Opcional):</label>
+                <input
+                  type="number"
+                  value={editingBudgetExpense.real_amount ?? ''}
+                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, real_amount: parseFloat(e.target.value) || 0 })}
+                  className="form-input"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowEditBudgetModal(false)} className="btn-pastel btn-secondary-pastel">
+                Cancelar
+              </button>
+              <button onClick={handleSaveEditedBudget} className="btn-pastel btn-primary-pastel">
+                Guardar Cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE ALCANCE PARA GASTOS RECURRENTES */}
+      <RecurrenceScopeModal
+        isOpen={recurrenceModal.isOpen}
+        action={recurrenceModal.action}
+        concept={recurrenceModal.expense?.concept}
+        date={recurrenceModal.expense?.date}
+        onSelectScope={handleRecurrenceScopeSelect}
+        onCancel={() => setRecurrenceModal((prev) => ({ ...prev, isOpen: false }))}
+      />
 
       <style>{`
         .week-container {

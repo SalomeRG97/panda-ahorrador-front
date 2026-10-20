@@ -7,6 +7,23 @@ import { formatCurrency } from '../../utils/formatters';
 // Lista cronológica de novedades y actualizaciones del sistema presentadas como noticias
 export const APP_NEWS_UPDATES: UpdateNewsItem[] = [
   {
+    id: 'news-2026-10-19-recurrence-scopes',
+    version: 'v2.6',
+    title: '🔁 Control Flexible de Gastos Recurrentes',
+    date: '19 Oct 2026',
+    tag: 'Flexibilidad Total',
+    tagColor: '#B28DFF',
+    icon: '⚡',
+    headline: '¡Elige qué modificar o eliminar: solo este gasto, este y los futuros, o toda la serie!',
+    description:
+      'Ahora, al editar o borrar un gasto programado periódicamente, una ventana inteligente te ofrece 3 opciones claras: «Solo este gasto» (modifica/borra solo esa fecha), «Este y los futuros» (aplica desde esta fecha en adelante conservando el historial) o «Todas las repeticiones» (para toda la serie). Además, tus montos reales ya registrados se protegen siempre.',
+    highlights: [
+      'Opciones: Solo este, Este y futuros, o Toda la serie',
+      'Disponible al editar o eliminar en calendario, lista y semanas',
+      'Protege los montos reales ejecutados en cada ocurrencia',
+    ],
+  },
+  {
     id: 'news-2026-10-19-savings-withdraw',
     version: 'v2.5',
     title: '💰 Retiro de Ahorros como Gasto Especial',

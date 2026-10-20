@@ -2,9 +2,10 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { ApiService } from '../../services/api.service';
 import { useToast } from '../../context/ToastContext';
-import { Category, BudgetExpense, ExtraExpense, Income, Week, MonthChallengeData, ChallengeDayProgress, RecurrenceFrequency } from '../../types';
+import { Category, BudgetExpense, ExtraExpense, Income, Week, MonthChallengeData, ChallengeDayProgress, RecurrenceFrequency, RecurrenceScope } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { PaymentMethodSelect } from '../../components/PaymentMethodSelect';
+import { RecurrenceScopeModal } from '../../components/common/RecurrenceScopeModal';
 
 export const MonthLayoutPage: React.FC = () => {
   const { yearId, monthId } = useParams<{ yearId: string; monthId: string }>();
@@ -65,7 +66,18 @@ export const MonthLayoutPage: React.FC = () => {
   const [editingIncomeId, setEditingIncomeId] = useState<number | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<BudgetExpense | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+  const [editingExpenseRecurrenceId, setEditingExpenseRecurrenceId] = useState<number | null>(null);
   const [editingRealAmount, setEditingRealAmount] = useState<number>(0);
+  const [recurrenceModal, setRecurrenceModal] = useState<{
+    isOpen: boolean;
+    action: 'edit' | 'delete';
+    expenseId?: number;
+    concept?: string;
+    date?: string;
+  }>({
+    isOpen: false,
+    action: 'delete',
+  });
   const [calendarView, setCalendarView] = useState<'grid' | 'list'>(
     (localStorage.getItem('budgetCalendarView') as 'grid' | 'list') || 'grid'
   );
@@ -291,7 +303,9 @@ export const MonthLayoutPage: React.FC = () => {
   };
 
   const openExpenseModal = (dateStr: string) => {
+    setSelectedExpense(null);
     setEditingExpenseId(null);
+    setEditingExpenseRecurrenceId(null);
     setEditingRealAmount(0);
     setNewExpense({
       month_id: mId,
@@ -307,6 +321,7 @@ export const MonthLayoutPage: React.FC = () => {
   const openEditExpenseModal = (exp: BudgetExpense) => {
     setSelectedExpense(null);
     setEditingExpenseId(exp.id || null);
+    setEditingExpenseRecurrenceId(exp.recurrence_id || null);
     setEditingRealAmount(parseFloat(exp.real_amount as any) || 0);
     setNewExpense({
       month_id: mId,
@@ -333,52 +348,92 @@ export const MonthLayoutPage: React.FC = () => {
       warning('Por favor ingresa concepto y monto');
       return;
     }
+    // Si estamos editando un gasto que forma parte de una serie recurrente
+    if (editingExpenseId && editingExpenseRecurrenceId) {
+      setRecurrenceModal({
+        isOpen: true,
+        action: 'edit',
+        expenseId: editingExpenseId,
+        concept: newExpense.concept,
+        date: newExpense.date,
+      });
+      return;
+    }
+    await executeSaveBudgetExpense('single');
+  };
+
+  const executeSaveBudgetExpense = async (scope: RecurrenceScope = 'single') => {
     try {
       if (editingExpenseId) {
-        await ApiService.updateBudgetExpense(editingExpenseId, {
-          ...newExpense,
-          real_amount: editingRealAmount,
-        } as BudgetExpense);
-        success('Gasto presupuestado actualizado 🌸');
+        await ApiService.updateBudgetExpense(
+          editingExpenseId,
+          {
+            ...newExpense,
+            real_amount: editingRealAmount,
+          } as BudgetExpense,
+          scope
+        );
+        if (scope === 'all') {
+          success('Todas las repeticiones fueron actualizadas 🌸');
+        } else if (scope === 'future') {
+          success('Repeticiones futuras actualizadas 🌸');
+        } else {
+          success('Gasto presupuestado actualizado 🌸');
+        }
       } else {
         await ApiService.createBudgetExpense(newExpense as BudgetExpense);
         success('Gasto presupuestado agregado 🌸');
       }
       setShowExpenseModal(false);
       setEditingExpenseId(null);
+      setEditingExpenseRecurrenceId(null);
+      setRecurrenceModal((prev) => ({ ...prev, isOpen: false }));
       loadMonthData();
     } catch (err: any) {
       error(err.response?.data?.message || 'Error al guardar gasto');
     }
   };
 
-  const deleteBudgetExpense = async (id: number, recurrent = false) => {
-    let deleteSeries = false;
-    if (recurrent) {
-      deleteSeries = await confirm(
-        'Este gasto es recurrente. ¿Eliminar este y todos los siguientes? (Si cancelas, podrás eliminar solo este)'
-      );
-      if (!deleteSeries) {
-        const onlyThis = await confirm('¿Eliminar solo este gasto? Los demás se mantienen.');
-        if (!onlyThis) return;
-      }
+  const deleteBudgetExpense = async (exp: { id?: number; recurrence_id?: number | null; concept?: string; date?: string }) => {
+    if (!exp.id) return;
+    if (exp.recurrence_id) {
+      setRecurrenceModal({
+        isOpen: true,
+        action: 'delete',
+        expenseId: exp.id,
+        concept: exp.concept,
+        date: exp.date,
+      });
     } else {
       const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
       if (!confirmed) return;
+      await executeDeleteBudgetExpense(exp.id, 'single');
     }
+  };
 
+  const executeDeleteBudgetExpense = async (id: number, scope: RecurrenceScope) => {
     try {
-      if (deleteSeries) {
-        await ApiService.deleteBudgetExpenseSeries(id);
-        success('Serie eliminada desde esta fecha');
+      await ApiService.deleteBudgetExpense(id, scope);
+      if (scope === 'all') {
+        success('Toda la serie recurrente ha sido eliminada 🌸');
+      } else if (scope === 'future') {
+        success('Gasto y repeticiones futuras eliminadas');
       } else {
-        await ApiService.deleteBudgetExpense(id);
         success('Gasto eliminado');
       }
       setSelectedExpense(null);
+      setRecurrenceModal((prev) => ({ ...prev, isOpen: false }));
       loadMonthData();
     } catch (err: any) {
       error(err.response?.data?.message || 'Error al eliminar gasto');
+    }
+  };
+
+  const handleRecurrenceScopeSelect = (scope: RecurrenceScope) => {
+    if (recurrenceModal.action === 'edit') {
+      executeSaveBudgetExpense(scope);
+    } else if (recurrenceModal.action === 'delete' && recurrenceModal.expenseId) {
+      executeDeleteBudgetExpense(recurrenceModal.expenseId, scope);
     }
   };
 
@@ -582,7 +637,7 @@ export const MonthLayoutPage: React.FC = () => {
                               <i className="fa-solid fa-pen"></i>
                             </button>{' '}
                             <button
-                              onClick={() => deleteBudgetExpense(exp.id!, !!exp.recurrence_id)}
+                              onClick={() => deleteBudgetExpense(exp)}
                               className="btn-pastel btn-delete-sm"
                               title="Eliminar"
                             >
@@ -1124,7 +1179,7 @@ export const MonthLayoutPage: React.FC = () => {
               )}
             </div>
             <div className="modal-footer">
-              <button onClick={() => deleteBudgetExpense(selectedExpense.id!, !!selectedExpense.recurrence_id)} className="btn-pastel btn-delete-sm">
+              <button onClick={() => deleteBudgetExpense(selectedExpense)} className="btn-pastel btn-delete-sm">
                 Eliminar
               </button>
               <button onClick={() => openEditExpenseModal(selectedExpense)} className="btn-pastel btn-secondary-pastel">
@@ -1186,6 +1241,16 @@ export const MonthLayoutPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL DE ALCANCE PARA GASTOS RECURRENTES */}
+      <RecurrenceScopeModal
+        isOpen={recurrenceModal.isOpen}
+        action={recurrenceModal.action}
+        concept={recurrenceModal.concept}
+        date={recurrenceModal.date}
+        onSelectScope={handleRecurrenceScopeSelect}
+        onCancel={() => setRecurrenceModal((prev) => ({ ...prev, isOpen: false }))}
+      />
 
       <style>{`
         .month-container { max-width: 1200px; margin: 20px auto; padding: 0 16px; }

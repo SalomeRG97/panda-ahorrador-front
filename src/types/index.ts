@@ -109,6 +109,7 @@ export interface BudgetExpense {
 }
 
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+export type RecurrenceScope = 'single' | 'future' | 'all';
 
 export interface PendingBudgetExpense {
   id: number;
