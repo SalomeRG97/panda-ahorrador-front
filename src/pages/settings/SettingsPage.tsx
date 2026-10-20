@@ -11,7 +11,7 @@ export const SettingsPage: React.FC = () => {
   const { currentUser, reloadProfile } = useAuth();
   const { success, error, warning, confirm } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'categories'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'categories' | 'paymentMethods'>('profile');
 
   // Datos Perfil
   const [name, setName] = useState(currentUser?.name || '');
@@ -33,6 +33,12 @@ export const SettingsPage: React.FC = () => {
   const [editingCatId, setEditingCatId] = useState<number | null>(null);
   const [catForm, setCatForm] = useState({ name: '', color: '#F4A6C1', icon: '📦' });
 
+  // Medios de pago
+  const [paymentMethods, setPaymentMethods] = useState<{ id: number; name: string }[]>([]);
+  const [showPmModal, setShowPmModal] = useState(false);
+  const [editingPmId, setEditingPmId] = useState<number | null>(null);
+  const [pmName, setPmName] = useState('');
+
   useEffect(() => {
     if (currentUser) {
       setName(currentUser.name);
@@ -40,7 +46,57 @@ export const SettingsPage: React.FC = () => {
       setEmail(currentUser.email);
     }
     loadCategories();
+    loadPaymentMethods();
   }, [currentUser]);
+
+  const loadPaymentMethods = () => {
+    ApiService.getPaymentMethods().then(setPaymentMethods).catch(console.error);
+  };
+
+  const openPmModal = () => {
+    setEditingPmId(null);
+    setPmName('');
+    setShowPmModal(true);
+  };
+
+  const editPaymentMethod = (pm: { id: number; name: string }) => {
+    setEditingPmId(pm.id);
+    setPmName(pm.name);
+    setShowPmModal(true);
+  };
+
+  const savePaymentMethod = async () => {
+    const trimmed = pmName.trim();
+    if (!trimmed) {
+      warning('Escribe el nombre del medio de pago');
+      return;
+    }
+    try {
+      if (editingPmId) {
+        await ApiService.updatePaymentMethod(editingPmId, trimmed);
+        success('Medio de pago actualizado (y sus gastos también) 💳');
+      } else {
+        await ApiService.createPaymentMethod(trimmed);
+        success('Medio de pago creado 💳');
+      }
+      setShowPmModal(false);
+      loadPaymentMethods();
+    } catch (err: any) {
+      error(err.response?.data?.message || 'Error al guardar medio de pago');
+    }
+  };
+
+  const handleDeletePaymentMethod = async (id: number) => {
+    const confirmed = await confirm('¿Eliminar este medio de pago de la lista? (Los gastos que ya lo usan no cambian)');
+    if (!confirmed) return;
+    try {
+      await ApiService.deletePaymentMethod(id);
+      success('Medio de pago eliminado');
+      loadPaymentMethods();
+    } catch (err: any) {
+      error(err.response?.data?.message || 'Error al eliminar medio de pago');
+    }
+  };
 
   const loadCategories = () => {
     ApiService.getCategories().then(setCategories).catch(console.error);
@@ -187,6 +243,9 @@ export const SettingsPage: React.FC = () => {
         </button>
         <button className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`} onClick={() => setActiveTab('categories')}>
           <i className="fa-solid fa-tags"></i> Categorías Personalizadas
+        </button>
+        <button className={`tab-btn ${activeTab === 'paymentMethods' ? 'active' : ''}`} onClick={() => setActiveTab('paymentMethods')}>
+          <i className="fa-solid fa-credit-card"></i> Medios de Pago
         </button>
       </div>
 
@@ -401,6 +460,89 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: MEDIOS DE PAGO */}
+      {activeTab === 'paymentMethods' && (
+        <div className="card-pastel category-section">
+          <div className="category-header">
+            <div>
+              <h3>Mis Medios de Pago</h3>
+              <p className="subtitle">
+                Estos aparecerán en la lista desplegable al registrar gastos. Si cambias un nombre, se actualiza en todos tus gastos.
+              </p>
+            </div>
+            <button onClick={openPmModal} className="btn-pastel btn-primary-pastel">
+              <i className="fa-solid fa-plus"></i> Nuevo Medio de Pago
+            </button>
+          </div>
+
+          <div className="categories-grid">
+            {paymentMethods.map((pm) => (
+              <div key={pm.id} className="category-card card-pastel" style={{ borderLeft: '6px solid #A8D8EA' }}>
+                <div className="cat-card-top">
+                  <span className="cat-icon-badge">💳</span>
+                  <div className="cat-info">
+                    <h4>{pm.name}</h4>
+                  </div>
+                </div>
+                <div className="cat-card-actions">
+                  <button onClick={() => editPaymentMethod(pm)} className="btn-pastel btn-secondary-pastel btn-xs">
+                    <i className="fa-solid fa-pen"></i> Editar
+                  </button>
+                  <button onClick={() => handleDeletePaymentMethod(pm.id)} className="btn-icon-danger btn-xs" title="Eliminar">
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="category-card card-pastel" style={{ borderLeft: '6px solid #FFE5A0', opacity: 0.85 }}>
+              <div className="cat-card-top">
+                <span className="cat-icon-badge">💰</span>
+                <div className="cat-info">
+                  <h4>Retiro de Ahorros</h4>
+                  <span className="cat-badge global">Del sistema</span>
+                </div>
+              </div>
+              <p className="subtitle" style={{ margin: 0 }}>Siempre disponible: descuenta el gasto de tus ahorros.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MEDIO DE PAGO */}
+      {showPmModal && (
+        <div className="modal-overlay" onClick={() => setShowPmModal(false)}>
+          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editingPmId ? '💳 Editar Medio de Pago' : '💳 Nuevo Medio de Pago'}</h3>
+              <button onClick={() => setShowPmModal(false)} className="close-btn">&times;</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Nombre:</label>
+                <input
+                  type="text"
+                  value={pmName}
+                  maxLength={50}
+                  onChange={(e) => setPmName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && savePaymentMethod()}
+                  placeholder="Ej: Visa, Efectivo, Nequi"
+                  className="form-control"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowPmModal(false)} className="btn-pastel btn-secondary-pastel">
+                Cancelar
+              </button>
+              <button onClick={savePaymentMethod} className="btn-pastel btn-primary-pastel">
+                <i className="fa-solid fa-check"></i> Guardar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { ApiService } from '../../services/api.service';
 import { useToast } from '../../context/ToastContext';
 import { Category, BudgetExpense, ExtraExpense, Income, Week, MonthChallengeData, ChallengeDayProgress } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
+import { PaymentMethodSelect } from '../../components/PaymentMethodSelect';
 
 export const MonthLayoutPage: React.FC = () => {
   const { yearId, monthId } = useParams<{ yearId: string; monthId: string }>();
@@ -19,6 +20,7 @@ export const MonthLayoutPage: React.FC = () => {
 
   const [monthDetails, setMonthDetails] = useState<any>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [calendarDays, setCalendarDays] = useState<{ dayNumber: number | null; dateStr: string; expenses: BudgetExpense[] }[]>([]);
   const [weeklyBreakdown, setWeeklyBreakdown] = useState<any[]>([]);
   const [challengeData, setChallengeData] = useState<MonthChallengeData | null>(null);
@@ -227,6 +229,7 @@ export const MonthLayoutPage: React.FC = () => {
     if (mId) {
       loadMonthData();
       ApiService.getCategories().then(setCategories).catch(console.error);
+      ApiService.getPaymentMethods().then((pms) => setPaymentMethods(pms.map((p) => p.name))).catch(console.error);
     }
   }, [mId]);
 
@@ -858,20 +861,12 @@ export const MonthLayoutPage: React.FC = () => {
               </div>
               <div className="form-group">
                 <label>Medio de Pago:</label>
-                <input
-                  type="text"
-                  list="payment-method-options"
+                <PaymentMethodSelect
                   value={newExpense.payment_method || ''}
-                  onChange={(e) => setNewExpense({ ...newExpense, payment_method: e.target.value })}
-                  placeholder="Ej: Débito, Efectivo, Retiro de Ahorros"
+                  methods={paymentMethods}
+                  onChange={(pm) => setNewExpense({ ...newExpense, payment_method: pm })}
                   className="form-input"
                 />
-                <datalist id="payment-method-options">
-                  <option value="Retiro de Ahorros" />
-                  <option value="Efectivo" />
-                  <option value="Débito" />
-                  <option value="Crédito" />
-                </datalist>
               </div>
               <div className="form-group">
                 <label>Monto Presupuestado ($):</label>

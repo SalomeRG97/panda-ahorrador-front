@@ -4,6 +4,7 @@ import { ApiService } from '../../services/api.service';
 import { useToast } from '../../context/ToastContext';
 import { Category, BudgetExpense, ExtraExpense, CategoryWeekTotal, PaymentMethodWeekTotal, Week } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
+import { PaymentMethodSelect } from '../../components/PaymentMethodSelect';
 
 interface AmountInputProps {
   value: number | undefined | null;
@@ -80,25 +81,36 @@ export const WeekDetailPage: React.FC = () => {
 
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [newExtra, setNewExtra] = useState<Partial<ExtraExpense>>({ amount: 0, concept: '', payment_method: '' });
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
   const { success, error, warning, confirm } = useToast();
 
   const budgetUpdateDebounceRef = useRef<{ [id: number]: any }>({});
   const extraUpdateDebounceRef = useRef<{ [id: number]: any }>({});
 
+  // Semana actualmente visible; evita que respuestas/timers de otra semana pisen el estado
+  const currentWeekRef = useRef<number>(wId);
+  currentWeekRef.current = wId;
+
   const loadWeekData = () => {
     if (!wId) return;
+    const requestedWeek = wId;
 
-    ApiService.getWeekDetail(wId)
+    ApiService.getWeekDetail(requestedWeek)
       .then((data) => {
+        if (currentWeekRef.current !== requestedWeek) return;
         setWeekData(data);
       })
-      .catch((err) => error(err.response?.data?.message || 'Error al cargar detalle de la semana'));
+      .catch((err) => {
+        if (currentWeekRef.current !== requestedWeek) return;
+        error(err.response?.data?.message || 'Error al cargar detalle de la semana');
+      });
 
     if (mId) {
       ApiService.getWeeksByMonth(mId)
         .then((weeks) => {
-          const idx = weeks.findIndex((w) => w.id === wId);
+          if (currentWeekRef.current !== requestedWeek) return;
+          const idx = weeks.findIndex((w) => w.id === requestedWeek);
           if (idx !== -1) {
             setPrevWeekId(idx > 0 ? weeks[idx - 1].id : null);
             setNextWeekId(idx < weeks.length - 1 ? weeks[idx + 1].id : null);
@@ -109,8 +121,12 @@ export const WeekDetailPage: React.FC = () => {
   };
 
   useEffect(() => {
+    setWeekData(null);
+    setPrevWeekId(null);
+    setNextWeekId(null);
     loadWeekData();
     ApiService.getCategories().then(setCategories).catch(console.error);
+    ApiService.getPaymentMethods().then((pms) => setPaymentMethods(pms.map((p) => p.name))).catch(console.error);
   }, [wId, mId]);
 
   const queueBudgetUpdate = (b: BudgetExpense) => {
@@ -220,12 +236,6 @@ export const WeekDetailPage: React.FC = () => {
 
   return (
     <div className="week-container animate-fade-in-up">
-      <datalist id="payment-method-options">
-        <option value="Retiro de Ahorros" />
-        <option value="Efectivo" />
-        <option value="Débito" />
-        <option value="Crédito" />
-      </datalist>
       {/* HEADER */}
       <div className="week-header card-pastel">
         <div>
@@ -343,12 +353,11 @@ export const WeekDetailPage: React.FC = () => {
                     />
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      list="payment-method-options"
+                    <PaymentMethodSelect
                       value={b.payment_method || ''}
-                      onChange={(e) => {
-                        const updated = { ...b, payment_method: e.target.value };
+                      methods={paymentMethods}
+                      onChange={(pm) => {
+                        const updated = { ...b, payment_method: pm };
                         setWeekData((prev) =>
                           prev
                             ? {
@@ -360,7 +369,6 @@ export const WeekDetailPage: React.FC = () => {
                         queueBudgetUpdate(updated);
                       }}
                       className="table-input"
-                      placeholder="Ej: Tarjeta, Efectivo"
                     />
                   </td>
                   <td className="font-bold">{formatCurrency(b.budget_amount)}</td>
@@ -498,12 +506,11 @@ export const WeekDetailPage: React.FC = () => {
                     />
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      list="payment-method-options"
+                    <PaymentMethodSelect
                       value={ext.payment_method || ''}
-                      onChange={(e) => {
-                        const updated = { ...ext, payment_method: e.target.value };
+                      methods={paymentMethods}
+                      onChange={(pm) => {
+                        const updated = { ...ext, payment_method: pm };
                         setWeekData((prev) =>
                           prev
                             ? {
@@ -515,7 +522,6 @@ export const WeekDetailPage: React.FC = () => {
                         queueExtraUpdate(updated);
                       }}
                       className="table-input"
-                      placeholder="Ej: Tarjeta, Efectivo"
                     />
                   </td>
                   <td>
@@ -668,12 +674,10 @@ export const WeekDetailPage: React.FC = () => {
               </div>
               <div className="form-group">
                 <label>Medio de Pago:</label>
-                <input
-                  type="text"
-                  list="payment-method-options"
+                <PaymentMethodSelect
                   value={newExtra.payment_method || ''}
-                  onChange={(e) => setNewExtra({ ...newExtra, payment_method: e.target.value })}
-                  placeholder="Ej: Tarjeta débito, Efectivo, Retiro de Ahorros"
+                  methods={paymentMethods}
+                  onChange={(pm) => setNewExtra({ ...newExtra, payment_method: pm })}
                   className="form-input"
                 />
               </div>

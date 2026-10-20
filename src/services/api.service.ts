@@ -37,6 +37,27 @@ export const ApiService = {
     return res.data.success;
   },
 
+  // MEDIOS DE PAGO
+  async getPaymentMethods(): Promise<{ id: number; name: string }[]> {
+    const res = await api.get<{ success: boolean; data: { id: number; name: string }[] }>('/payment-methods');
+    return res.data.data;
+  },
+
+  async createPaymentMethod(name: string): Promise<{ id: number; name: string }> {
+    const res = await api.post<{ success: boolean; data: { id: number; name: string } }>('/payment-methods', { name });
+    return res.data.data;
+  },
+
+  async updatePaymentMethod(id: number, name: string): Promise<{ id: number; name: string }> {
+    const res = await api.put<{ success: boolean; data: { id: number; name: string } }>(`/payment-methods/${id}`, { name });
+    return res.data.data;
+  },
+
+  async deletePaymentMethod(id: number): Promise<boolean> {
+    const res = await api.delete<{ success: boolean }>(`/payment-methods/${id}`);
+    return res.data.success;
+  },
+
   // AÑOS
   async getYears(): Promise<Year[]> {
     const res = await api.get<{ success: boolean; data: Year[] }>('/years');
