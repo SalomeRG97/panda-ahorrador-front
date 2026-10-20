@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { ApiService } from '../../services/api.service';
 import { useToast } from '../../context/ToastContext';
-import { Category, BudgetExpense, ExtraExpense, Income, Week, MonthChallengeData, ChallengeDayProgress } from '../../types';
+import { Category, BudgetExpense, ExtraExpense, Income, Week, MonthChallengeData, ChallengeDayProgress, RecurrenceFrequency } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { PaymentMethodSelect } from '../../components/PaymentMethodSelect';
 
@@ -352,13 +352,29 @@ export const MonthLayoutPage: React.FC = () => {
     }
   };
 
-  const deleteBudgetExpense = async (id: number) => {
-    const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
-    if (!confirmed) return;
+  const deleteBudgetExpense = async (id: number, recurrent = false) => {
+    let deleteSeries = false;
+    if (recurrent) {
+      deleteSeries = await confirm(
+        'Este gasto es recurrente. ¿Eliminar este y todos los siguientes? (Si cancelas, podrás eliminar solo este)'
+      );
+      if (!deleteSeries) {
+        const onlyThis = await confirm('¿Eliminar solo este gasto? Los demás se mantienen.');
+        if (!onlyThis) return;
+      }
+    } else {
+      const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
+      if (!confirmed) return;
+    }
 
     try {
-      await ApiService.deleteBudgetExpense(id);
-      success('Gasto eliminado');
+      if (deleteSeries) {
+        await ApiService.deleteBudgetExpenseSeries(id);
+        success('Serie eliminada desde esta fecha');
+      } else {
+        await ApiService.deleteBudgetExpense(id);
+        success('Gasto eliminado');
+      }
       setSelectedExpense(null);
       loadMonthData();
     } catch (err: any) {
@@ -553,7 +569,7 @@ export const MonthLayoutPage: React.FC = () => {
                               {exp.category_icon} {exp.category_name}
                             </span>
                           </td>
-                          <td>{exp.concept}</td>
+                          <td>{exp.recurrence_id ? '🔁 ' : ''}{exp.concept}</td>
                           <td>{exp.payment_method || '—'}</td>
                           <td className="font-bold">{formatCurrency(exp.budget_amount)}</td>
                           <td>{formatCurrency(exp.real_amount || 0)}</td>
@@ -566,7 +582,7 @@ export const MonthLayoutPage: React.FC = () => {
                               <i className="fa-solid fa-pen"></i>
                             </button>{' '}
                             <button
-                              onClick={() => deleteBudgetExpense(exp.id!)}
+                              onClick={() => deleteBudgetExpense(exp.id!, !!exp.recurrence_id)}
                               className="btn-pastel btn-delete-sm"
                               title="Eliminar"
                             >
@@ -619,7 +635,7 @@ export const MonthLayoutPage: React.FC = () => {
                         }}
                       >
                         <span className="exp-icon">{exp.category_icon}</span>
-                        <span className="exp-concept">{exp.concept}</span>
+                        <span className="exp-concept">{exp.recurrence_id ? '🔁 ' : ''}{exp.concept}</span>
                         <span className="exp-amount">{formatCurrency(exp.budget_amount)}</span>
                       </div>
                     ))}
@@ -1015,6 +1031,52 @@ export const MonthLayoutPage: React.FC = () => {
                   className="form-input"
                 />
               </div>
+              {!editingExpenseId && (
+                <>
+                  <div className="form-group">
+                    <label>Repetir:</label>
+                    <select
+                      value={newExpense.recurrence?.frequency || ''}
+                      onChange={(e) =>
+                        setNewExpense({
+                          ...newExpense,
+                          recurrence: e.target.value
+                            ? { frequency: e.target.value as RecurrenceFrequency, end_date: newExpense.recurrence?.end_date || null }
+                            : undefined,
+                        })
+                      }
+                      className="form-input"
+                    >
+                      <option value="">No se repite</option>
+                      <option value="daily">Diariamente</option>
+                      <option value="weekly">Semanalmente</option>
+                      <option value="biweekly">Cada 2 semanas</option>
+                      <option value="monthly">Mensualmente</option>
+                      <option value="yearly">Anualmente</option>
+                    </select>
+                  </div>
+                  {newExpense.recurrence && (
+                    <div className="form-group">
+                      <label>Repetir hasta (opcional):</label>
+                      <input
+                        type="date"
+                        value={newExpense.recurrence.end_date || ''}
+                        min={newExpense.date || undefined}
+                        onChange={(e) =>
+                          setNewExpense({
+                            ...newExpense,
+                            recurrence: { ...newExpense.recurrence!, end_date: e.target.value || null },
+                          })
+                        }
+                        className="form-input"
+                      />
+                      <small style={{ opacity: 0.7 }}>
+                        Sin fecha final: se agrega en todos los meses creados y en los años que crees después. El valor real de cada ocurrencia es independiente.
+                      </small>
+                    </div>
+                  )}
+                </>
+              )}
               <div className="form-group">
                 <label>Monto Presupuestado ($):</label>
                 <input
@@ -1050,6 +1112,9 @@ export const MonthLayoutPage: React.FC = () => {
               </div>
               <h2 style={{ marginTop: '12px' }}>{selectedExpense.concept}</h2>
               <p>Fecha: <strong>{selectedExpense.date}</strong></p>
+              {selectedExpense.recurrence_id && (
+                <p>Repetición: <strong>🔁 Recurrente</strong></p>
+              )}
               {selectedExpense.payment_method && (
                 <p>Medio de Pago: <strong>{selectedExpense.payment_method}</strong></p>
               )}
@@ -1059,7 +1124,7 @@ export const MonthLayoutPage: React.FC = () => {
               )}
             </div>
             <div className="modal-footer">
-              <button onClick={() => deleteBudgetExpense(selectedExpense.id!)} className="btn-pastel btn-delete-sm">
+              <button onClick={() => deleteBudgetExpense(selectedExpense.id!, !!selectedExpense.recurrence_id)} className="btn-pastel btn-delete-sm">
                 Eliminar
               </button>
               <button onClick={() => openEditExpenseModal(selectedExpense)} className="btn-pastel btn-secondary-pastel">

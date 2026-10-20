@@ -127,6 +127,12 @@ export const ApiService = {
     return res.data.success;
   },
 
+  // Elimina este gasto recurrente y todos los siguientes
+  async deleteBudgetExpenseSeries(id: number): Promise<boolean> {
+    const res = await api.delete<{ success: boolean }>(`/expenses/budget/${id}/series`);
+    return res.data.success;
+  },
+
   // GASTOS EXTRA
   async createExtraExpense(expense: ExtraExpense): Promise<ExtraExpense> {
     const res = await api.post<{ success: boolean; data: ExtraExpense }>('/expenses/extra', expense);

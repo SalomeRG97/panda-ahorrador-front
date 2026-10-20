@@ -103,7 +103,12 @@ export interface BudgetExpense {
   category_name?: string;
   category_color?: string;
   category_icon?: string;
+  recurrence_id?: number | null;
+  recurrence_frequency?: RecurrenceFrequency | null;
+  recurrence?: { frequency: RecurrenceFrequency; end_date?: string | null };
 }
+
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
 
 export interface ExtraExpense {
   id?: number;

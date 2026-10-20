@@ -159,9 +159,21 @@ export const WeekDetailPage: React.FC = () => {
     }, 500);
   };
 
-  const deleteBudgetRow = async (id: number) => {
-    const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
-    if (!confirmed) return;
+  const deleteBudgetRow = async (b: BudgetExpense) => {
+    const id = b.id!;
+    let deleteSeries = false;
+    if (b.recurrence_id) {
+      deleteSeries = await confirm(
+        'Este gasto es recurrente. ¿Eliminar este y todos los siguientes? (Si cancelas, podrás eliminar solo este)'
+      );
+      if (!deleteSeries) {
+        const onlyThis = await confirm('¿Eliminar solo este gasto? Los demás se mantienen.');
+        if (!onlyThis) return;
+      }
+    } else {
+      const confirmed = await confirm('¿Deseas eliminar este gasto presupuestado?');
+      if (!confirmed) return;
+    }
 
     // Cancelar cualquier debounce timer pendiente para este gasto
     if (budgetUpdateDebounceRef.current[id]) {
@@ -170,8 +182,13 @@ export const WeekDetailPage: React.FC = () => {
     }
 
     try {
-      await ApiService.deleteBudgetExpense(id);
-      success('Gasto presupuestado eliminado');
+      if (deleteSeries) {
+        await ApiService.deleteBudgetExpenseSeries(id);
+        success('Serie eliminada desde esta fecha');
+      } else {
+        await ApiService.deleteBudgetExpense(id);
+        success('Gasto presupuestado eliminado');
+      }
       loadWeekData();
     } catch (err: any) {
       error(err.response?.data?.message || 'Error al eliminar gasto');
@@ -334,23 +351,26 @@ export const WeekDetailPage: React.FC = () => {
                     />
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      value={b.concept || ''}
-                      onChange={(e) => {
-                        const updated = { ...b, concept: e.target.value };
-                        setWeekData((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                budgetExpenses: prev.budgetExpenses.map((row) => (row.id === b.id ? updated : row)),
-                              }
-                            : null
-                        );
-                        queueBudgetUpdate(updated);
-                      }}
-                      className="table-input"
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {b.recurrence_id && <span title="Gasto recurrente" style={{ fontSize: '0.9rem' }}>🔁</span>}
+                      <input
+                        type="text"
+                        value={b.concept || ''}
+                        onChange={(e) => {
+                          const updated = { ...b, concept: e.target.value };
+                          setWeekData((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  budgetExpenses: prev.budgetExpenses.map((row) => (row.id === b.id ? updated : row)),
+                                }
+                              : null
+                          );
+                          queueBudgetUpdate(updated);
+                        }}
+                        className="table-input"
+                      />
+                    </div>
                   </td>
                   <td>
                     <PaymentMethodSelect
@@ -397,7 +417,11 @@ export const WeekDetailPage: React.FC = () => {
                     />
                   </td>
                   <td>
-                    <button onClick={() => deleteBudgetRow(b.id!)} className="btn-icon-danger" title="Eliminar">
+                    <button
+                      onClick={() => deleteBudgetRow(b)}
+                      className="btn-icon-danger"
+                      title={b.recurrence_id ? 'Eliminar (gasto recurrente)' : 'Eliminar'}
+                    >
                       <i className="fa-solid fa-trash"></i>
                     </button>
                   </td>
