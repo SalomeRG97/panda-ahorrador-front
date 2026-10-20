@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ApiService } from '../../services/api.service';
 import { PendingBudgetExpense, UpdateNewsItem } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
+import { ModalPortal } from './ModalPortal';
 
 // Lista cronológica de novedades y actualizaciones del sistema presentadas como noticias
 export const APP_NEWS_UPDATES: UpdateNewsItem[] = [
@@ -184,8 +185,9 @@ export const NotificationsModal: React.FC<Props> = ({
   const pendingCount = pendingExpenses.length;
 
   return (
-    <div className="notif-modal-overlay" onClick={onClose}>
-      <div className="notif-modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+    <ModalPortal isOpen={isOpen}>
+      <div className="notif-modal-overlay" onClick={onClose}>
+        <div className="notif-modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
         {/* HEADER */}
         <div className="notif-modal-header">
           <div className="notif-header-title">
@@ -346,20 +348,29 @@ export const NotificationsModal: React.FC<Props> = ({
         .notif-modal-overlay {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(40, 25, 35, 0.5);
-          backdrop-filter: blur(5px);
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          background: rgba(30, 20, 35, 0.55);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 3000;
-          padding: 16px;
+          z-index: 999999;
+          padding: clamp(10px, 3vh, 24px) 14px;
+          overflow-y: auto;
+          overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+          box-sizing: border-box;
           animation: fadeIn 0.2s ease;
         }
 
         .notif-modal-card {
+          margin: auto;
           width: 100%;
           max-width: 650px;
-          max-height: 88vh;
+          max-height: calc(100dvh - 36px);
           display: flex;
           flex-direction: column;
           background: #FFFFFF;
@@ -367,6 +378,7 @@ export const NotificationsModal: React.FC<Props> = ({
           border: 2px solid #F4A6C1;
           box-shadow: 0 16px 40px rgba(212, 86, 106, 0.25);
           overflow: hidden;
+          box-sizing: border-box;
           animation: scaleUp 0.22s ease-out;
         }
 
@@ -374,9 +386,10 @@ export const NotificationsModal: React.FC<Props> = ({
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 18px 22px 14px;
+          padding: 16px 20px 14px;
           border-bottom: 1.5px solid #FFE5EC;
           background: linear-gradient(135deg, #FFF0F4 0%, #FFFFFF 100%);
+          flex-shrink: 0;
         }
 
         .notif-header-title {
@@ -424,6 +437,7 @@ export const NotificationsModal: React.FC<Props> = ({
           padding: 10px 18px;
           background: #FFF9FA;
           border-bottom: 1px solid #FFE5EC;
+          flex-shrink: 0;
         }
 
         .notif-tab-btn {
@@ -462,9 +476,11 @@ export const NotificationsModal: React.FC<Props> = ({
         .count-news { background: #5A82E6; color: #FFFFFF; }
 
         .notif-tab-content {
-          padding: 18px 22px;
+          padding: 16px 20px;
           overflow-y: auto;
-          flex: 1;
+          flex: 1 1 auto;
+          min-height: 0;
+          -webkit-overflow-scrolling: touch;
         }
 
         .notif-content-intro {
@@ -734,9 +750,10 @@ export const NotificationsModal: React.FC<Props> = ({
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 22px;
+          padding: 12px 20px;
           border-top: 1.5px solid #FFE5EC;
           background: #FFF9FA;
+          flex-shrink: 0;
         }
         .footer-tip {
           font-size: 0.76rem;
@@ -748,18 +765,67 @@ export const NotificationsModal: React.FC<Props> = ({
           to { opacity: 1; }
         }
         @keyframes scaleUp {
-          from { opacity: 0; transform: scale(0.94); }
+          from { opacity: 0; transform: scale(0.96); }
           to { opacity: 1; transform: scale(1); }
         }
 
         @media (max-width: 600px) {
-          .notif-modal-card { max-height: 94vh; }
-          .notif-tab-btn { font-size: 0.78rem; padding: 7px 10px; }
-          .pending-expense-card { flex-direction: column; align-items: stretch; }
-          .pending-card-right { flex-direction: row; justify-content: space-between; align-items: center; margin-top: 6px; }
-          .footer-tip { display: none; }
+          .notif-modal-overlay {
+            padding: 8px 10px;
+          }
+          .notif-modal-card {
+            max-height: calc(100dvh - 16px);
+            border-radius: 16px;
+          }
+          .notif-modal-header {
+            padding: 12px 14px 10px;
+          }
+          .notif-header-title {
+            gap: 8px;
+          }
+          .notif-bell-icon {
+            font-size: 1.35rem;
+            padding: 6px;
+          }
+          .notif-header-title h3 {
+            font-size: 1.05rem;
+          }
+          .notif-header-title .subtitle {
+            font-size: 0.72rem;
+          }
+          .notif-tabs {
+            padding: 8px 10px;
+            gap: 4px;
+          }
+          .notif-tab-btn {
+            font-size: 0.76rem;
+            padding: 7px 6px;
+          }
+          .notif-tab-content {
+            padding: 12px 14px;
+          }
+          .pending-expense-card {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 10px 12px;
+          }
+          .pending-card-right {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed rgba(244, 166, 193, 0.4);
+          }
+          .notif-modal-footer {
+            padding: 10px 14px;
+          }
+          .footer-tip {
+            display: none;
+          }
         }
       `}</style>
     </div>
+    </ModalPortal>
   );
 };

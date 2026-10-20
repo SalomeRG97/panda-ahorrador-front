@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { ModalPortal } from '../components/common/ModalPortal';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -112,20 +113,22 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       {/* CONFIRM DIALOG MODAL */}
       {confirmVisible && (
-        <div className="modal-overlay confirm-overlay" onClick={() => handleResolveConfirm(false)}>
-          <div className="modal-card card-pastel confirm-card" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon">🐼</div>
-            <p className="confirm-message">{confirmMessage}</p>
-            <div className="confirm-actions">
-              <button type="button" className="btn-pastel btn-secondary-pastel" onClick={() => handleResolveConfirm(false)}>
-                {confirmTexts.cancel}
-              </button>
-              <button type="button" className="btn-pastel btn-primary-pastel" onClick={() => handleResolveConfirm(true)}>
-                {confirmTexts.confirm}
-              </button>
+        <ModalPortal isOpen={confirmVisible}>
+          <div className="modal-overlay confirm-overlay" onClick={() => handleResolveConfirm(false)}>
+            <div className="modal-card card-pastel confirm-card" onClick={(e) => e.stopPropagation()}>
+              <div className="confirm-icon">🐼</div>
+              <p className="confirm-message">{confirmMessage}</p>
+              <div className="confirm-actions">
+                <button type="button" className="btn-pastel btn-secondary-pastel" onClick={() => handleResolveConfirm(false)}>
+                  {confirmTexts.cancel}
+                </button>
+                <button type="button" className="btn-pastel btn-primary-pastel" onClick={() => handleResolveConfirm(true)}>
+                  {confirmTexts.confirm}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </ToastContext.Provider>
   );

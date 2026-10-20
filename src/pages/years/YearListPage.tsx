@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ApiService } from '../../services/api.service';
 import { useToast } from '../../context/ToastContext';
 import { Year } from '../../types';
+import { ModalPortal } from '../../components/common/ModalPortal';
 
 const monthOptions = [
   { value: 1, label: 'Enero' },
@@ -124,53 +125,55 @@ export const YearListPage: React.FC = () => {
 
       {/* MODAL CREAR AÑO */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>🌸 Crear Nuevo Año — 新增年份</h3>
-              <button onClick={() => setShowModal(false)} className="close-btn">&times;</button>
+        <ModalPortal isOpen={showModal}>
+          <div className="modal-overlay" onClick={() => setShowModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>🌸 Crear Nuevo Año — 新增年份</h3>
+                <button onClick={() => setShowModal(false)} className="close-btn">&times;</button>
+              </div>
+              <form onSubmit={handleSaveYear}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>Año (ej: 2026):</label>
+                    <input
+                      type="number"
+                      value={newYear}
+                      onChange={(e) => setNewYear(parseInt(e.target.value) || newYear)}
+                      className="form-input"
+                      min="2020"
+                      max="2100"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Mes de inicio:</label>
+                    <select
+                      value={newStartMonth}
+                      onChange={(e) => setNewStartMonth(parseInt(e.target.value))}
+                      className="form-input"
+                    >
+                      {monthOptions.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="help-text">Se crearán automáticamente los meses desde este mes hasta Diciembre.</small>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" onClick={() => setShowModal(false)} className="btn-pastel btn-secondary-pastel">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn-pastel btn-primary-pastel" disabled={loading}>
+                    <i className="fa-solid fa-check"></i> {loading ? 'Creando...' : 'Crear Año'}
+                  </button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleSaveYear}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Año (ej: 2026):</label>
-                  <input
-                    type="number"
-                    value={newYear}
-                    onChange={(e) => setNewYear(parseInt(e.target.value) || newYear)}
-                    className="form-input"
-                    min="2020"
-                    max="2100"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Mes de inicio:</label>
-                  <select
-                    value={newStartMonth}
-                    onChange={(e) => setNewStartMonth(parseInt(e.target.value))}
-                    className="form-input"
-                  >
-                    {monthOptions.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="help-text">Se crearán automáticamente los meses desde este mes hasta Diciembre.</small>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-pastel btn-secondary-pastel">
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-pastel btn-primary-pastel" disabled={loading}>
-                  <i className="fa-solid fa-check"></i> {loading ? 'Creando...' : 'Crear Año'}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       <style>{`
@@ -188,14 +191,10 @@ export const YearListPage: React.FC = () => {
         .btn-delete-sm:hover { background: #D4566A; color: white; }
         .empty-card { text-align: center; padding: 50px 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
         .empty-icon { font-size: 3.5rem; }
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
-        .modal-card { width: 100%; max-width: 450px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .close-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #888; }
         .form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
         .form-input { padding: 10px; border-radius: 10px; border: 1.5px solid #F4A6C1; font-family: 'Comfortaa', cursive; outline: none; }
         .help-text { font-size: 0.8rem; color: #888; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 
         @media (max-width: 600px) {
           .years-container { margin: 16px auto; padding: 0 12px; }

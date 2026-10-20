@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { User } from '../../types';
+import { ModalPortal } from '../../components/common/ModalPortal';
 
 import { getAvatarUrl } from '../../config/environment';
 
@@ -157,104 +158,111 @@ export const UserManagementPage: React.FC = () => {
 
       {/* MODAL DE CREAR / EDITAR USUARIO */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <h3>
-              <i className={`fa-solid ${isEditing ? 'fa-user-pen' : 'fa-user-plus'}`}></i>{' '}
-              {isEditing ? 'Editar Usuario' : 'Crear Usuario'}
-            </h3>
-
-            <form onSubmit={handleSaveUser} className="modal-form">
-              <div className="form-group">
-                <label htmlFor="modalName">Nombre Completo</label>
-                <input
-                  type="text"
-                  id="modalName"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="form-control"
-                />
+        <ModalPortal isOpen={showModal}>
+          <div className="modal-overlay" onClick={() => setShowModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>
+                  <i className={`fa-solid ${isEditing ? 'fa-user-pen' : 'fa-user-plus'}`}></i>{' '}
+                  {isEditing ? 'Editar Usuario' : 'Crear Usuario'}
+                </h3>
+                <button onClick={() => setShowModal(false)} className="close-btn">&times;</button>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="modalUsername">Nombre de Usuario</label>
-                <input
-                  type="text"
-                  id="modalUsername"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-                  className="form-control"
-                />
-              </div>
+              <form onSubmit={handleSaveUser}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label htmlFor="modalName">Nombre Completo</label>
+                    <input
+                      type="text"
+                      id="modalName"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      className="form-control"
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label htmlFor="modalEmail">Correo Electrónico</label>
-                <input
-                  type="email"
-                  id="modalEmail"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  className="form-control"
-                />
-              </div>
+                  <div className="form-group">
+                    <label htmlFor="modalUsername">Nombre de Usuario</label>
+                    <input
+                      type="text"
+                      id="modalUsername"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      required
+                      className="form-control"
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label htmlFor="modalRole">Rol del Usuario</label>
-                <select
-                  id="modalRole"
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-                  required
-                  className="form-control"
-                >
-                  <option value="regular">REGULAR (Gestión de sus propios gastos)</option>
-                  <option value="viewer">VIEWER (Solo lectura de gastos compartidos)</option>
-                  <option value="admin">ADMIN (Administrador del sistema)</option>
-                </select>
-              </div>
+                  <div className="form-group">
+                    <label htmlFor="modalEmail">Correo Electrónico</label>
+                    <input
+                      type="email"
+                      id="modalEmail"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                      className="form-control"
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label htmlFor="modalStatus">Estado de la cuenta</label>
-                <select
-                  id="modalStatus"
-                  value={formData.isActive ? 'true' : 'false'}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'true' })}
-                  required
-                  className="form-control"
-                >
-                  <option value="true">Activo</option>
-                  <option value="false">Inactivo</option>
-                </select>
-              </div>
+                  <div className="form-group">
+                    <label htmlFor="modalRole">Rol del Usuario</label>
+                    <select
+                      id="modalRole"
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                      required
+                      className="form-control"
+                    >
+                      <option value="regular">REGULAR (Gestión de sus propios gastos)</option>
+                      <option value="viewer">VIEWER (Solo lectura de gastos compartidos)</option>
+                      <option value="admin">ADMIN (Administrador del sistema)</option>
+                    </select>
+                  </div>
 
-              {!isEditing && (
-                <div className="form-group">
-                  <label htmlFor="modalPassword">Contraseña Inicial</label>
-                  <input
-                    type="password"
-                    id="modalPassword"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Temporal123!"
-                    className="form-control"
-                  />
+                  <div className="form-group">
+                    <label htmlFor="modalStatus">Estado de la cuenta</label>
+                    <select
+                      id="modalStatus"
+                      value={formData.isActive ? 'true' : 'false'}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'true' })}
+                      required
+                      className="form-control"
+                    >
+                      <option value="true">Activo</option>
+                      <option value="false">Inactivo</option>
+                    </select>
+                  </div>
+
+                  {!isEditing && (
+                    <div className="form-group">
+                      <label htmlFor="modalPassword">Contraseña Inicial</label>
+                      <input
+                        type="password"
+                        id="modalPassword"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="Temporal123!"
+                        className="form-control"
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
 
-              <div className="modal-actions">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-pastel btn-secondary-pastel">
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-pastel btn-primary-pastel">
-                  Guardar
-                </button>
-              </div>
-            </form>
+                <div className="modal-footer">
+                  <button type="button" onClick={() => setShowModal(false)} className="btn-pastel btn-secondary-pastel">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn-pastel btn-primary-pastel">
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       <style>{`
@@ -288,13 +296,10 @@ export const UserManagementPage: React.FC = () => {
         .btn-delete:hover { background-color: #FFEBEE; }
         .btn-activate { color: #43A047; }
         .btn-activate:hover { background-color: #E8F5E9; }
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
-        .modal-card { width: 100%; max-width: 440px; padding: 24px; }
-        .modal-form { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
-        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .close-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #888; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
         .form-group label { font-size: 0.85rem; font-weight: 600; }
         .form-control { padding: 10px 12px; border-radius: var(--radius-md); border: 1.5px solid #F4A6C1; background-color: #FFF0F4; font-family: var(--font-body); font-size: 0.9rem; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
         @media (max-width: 600px) {
           .admin-container { padding: 16px 10px; }
           .actions-bar { justify-content: center; }

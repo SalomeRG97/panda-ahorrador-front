@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { RecurrenceScope } from '../../types';
+import { ModalPortal } from './ModalPortal';
 
 interface Props {
   isOpen: boolean;
@@ -18,269 +19,266 @@ export const RecurrenceScopeModal: React.FC<Props> = ({
   onSelectScope,
   onCancel,
 }) => {
+  const [selectedScope, setSelectedScope] = useState<RecurrenceScope>('single');
+
+  // Cada vez que se abre el modal, restablecer la selección por defecto a 'single' (como en Google Calendar)
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedScope('single');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const isDelete = action === 'delete';
 
-  return (
-    <div className="recurrence-modal-overlay" onClick={onCancel}>
-      <div className="recurrence-modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-        {/* ENCABEZADO */}
-        <div className="recurrence-modal-header">
-          <div className="header-icon-badge">
-            {isDelete ? '🗑️' : '✏️'}
-          </div>
-          <div>
-            <h3>{isDelete ? 'Eliminar Gasto Recurrente' : 'Editar Gasto Recurrente'}</h3>
-            <p className="subtitle">
-              Este gasto forma parte de una serie programada periódicamente 🔁
-            </p>
-          </div>
-          <button className="btn-close-modal" onClick={onCancel} aria-label="Cerrar">
-            &times;
-          </button>
-        </div>
+  const handleConfirm = () => {
+    onSelectScope(selectedScope);
+  };
 
-        {/* DETALLE DEL GASTO */}
-        {(concept || date) && (
-          <div className="expense-context-pill">
-            <span className="pill-concept"><strong>Gasto:</strong> {concept || 'Sin concepto'}</span>
-            {date && <span className="pill-date">📅 Fecha actual: {date}</span>}
-          </div>
+  return (
+    <ModalPortal isOpen={isOpen}>
+      <div className="google-modal-overlay" onClick={onCancel}>
+        <div
+          className="google-modal-card card-pastel"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rec-modal-title"
+        >
+        {/* TÍTULO ESTILO GOOGLE CALENDAR */}
+        <h3 id="rec-modal-title" className="google-modal-title">
+          {isDelete ? 'Eliminar gasto periódico' : 'Editar gasto periódico'}
+        </h3>
+
+        {/* DETALLE OPCIONAL DEL GASTO */}
+        {concept && (
+          <p className="google-modal-subtitle">
+            {concept} {date ? `• ${date}` : ''}
+          </p>
         )}
 
-        <p className="scope-prompt-text">
-          {isDelete
-            ? '¿Cómo deseas eliminar este gasto de tu planificación?'
-            : '¿A cuáles repeticiones deseas aplicar los cambios editados?'}
-        </p>
-
-        {/* OPCIONES DE ALCANCE (SCOPES) */}
-        <div className="scope-options-grid">
-          {/* OPCIÓN 1: SOLO ESTE */}
-          <button
-            type="button"
-            className="scope-option-btn scope-single"
-            onClick={() => onSelectScope('single')}
+        {/* GRUPO DE OPCIONES DE RADIO (EXACTO A GOOGLE CALENDAR) */}
+        <div className="google-radio-group" role="radiogroup">
+          {/* OPCIÓN 1: ESTE GASTO */}
+          <label
+            className={`google-radio-row ${selectedScope === 'single' ? 'selected' : ''}`}
+            onClick={() => setSelectedScope('single')}
           >
-            <div className="scope-icon-wrap">📌</div>
-            <div className="scope-text-wrap">
-              <h4>{isDelete ? 'Borrar solo este gasto' : 'Editar solo este gasto'}</h4>
-              <p>
-                {isDelete
-                  ? 'Elimina únicamente la repetición de esta fecha. El resto de las repeticiones se mantienen intactas.'
-                  : 'Modifica únicamente el registro de esta fecha. El resto de las repeticiones de la serie no se alteran.'}
-              </p>
+            <div className="google-radio-circle">
+              {selectedScope === 'single' && <div className="google-radio-dot"></div>}
             </div>
-          </button>
+            <span className="google-radio-label">Este gasto</span>
+          </label>
 
-          {/* OPCIÓN 2: ESTE Y LOS FUTUROS */}
-          <button
-            type="button"
-            className="scope-option-btn scope-future"
-            onClick={() => onSelectScope('future')}
+          {/* OPCIÓN 2: ESTE GASTO Y LOS POSTERIORES */}
+          <label
+            className={`google-radio-row ${selectedScope === 'future' ? 'selected' : ''}`}
+            onClick={() => setSelectedScope('future')}
           >
-            <div className="scope-icon-wrap">⏭️</div>
-            <div className="scope-text-wrap">
-              <h4>{isDelete ? 'Borrar este y los futuros' : 'Editar este y los futuros'}</h4>
-              <p>
-                {isDelete
-                  ? 'Elimina este gasto y todas las repeticiones a partir de esta fecha hacia adelante. Las fechas pasadas se conservan.'
-                  : 'Aplica los cambios a este gasto y a todas las repeticiones futuras. Las fechas pasadas se conservan con sus valores originales.'}
-              </p>
+            <div className="google-radio-circle">
+              {selectedScope === 'future' && <div className="google-radio-dot"></div>}
             </div>
-          </button>
+            <span className="google-radio-label">Este gasto y los posteriores</span>
+          </label>
 
-          {/* OPCIÓN 3: TODAS LAS REPETICIONES */}
-          <button
-            type="button"
-            className="scope-option-btn scope-all"
-            onClick={() => onSelectScope('all')}
+          {/* OPCIÓN 3: TODOS LOS GASTOS */}
+          <label
+            className={`google-radio-row ${selectedScope === 'all' ? 'selected' : ''}`}
+            onClick={() => setSelectedScope('all')}
           >
-            <div className="scope-icon-wrap">🔁</div>
-            <div className="scope-text-wrap">
-              <h4>{isDelete ? 'Borrar todas las repeticiones' : 'Editar todas las repeticiones'}</h4>
-              <p>
-                {isDelete
-                  ? 'Elimina absolutamente todas las repeticiones de la serie (pasadas, presentes y futuras) y cancela la repetición.'
-                  : 'Aplica los cambios a toda la serie (pasadas, presentes y futuras), manteniendo intacto el valor real que ya hayas registrado.'}
-              </p>
+            <div className="google-radio-circle">
+              {selectedScope === 'all' && <div className="google-radio-dot"></div>}
             </div>
-          </button>
+            <span className="google-radio-label">Todos los gastos</span>
+          </label>
         </div>
 
-        {/* FOOTER */}
-        <div className="recurrence-modal-footer">
-          <button type="button" onClick={onCancel} className="btn-pastel btn-secondary-pastel btn-cancel">
+        {/* BOTONES DE ACCIÓN: CANCELAR Y ACEPTAR */}
+        <div className="google-modal-actions">
+          <button
+            type="button"
+            className="google-btn-text"
+            onClick={onCancel}
+          >
             Cancelar
+          </button>
+          <button
+            type="button"
+            className="google-btn-primary"
+            onClick={handleConfirm}
+          >
+            Aceptar
           </button>
         </div>
       </div>
 
       <style>{`
-        .recurrence-modal-overlay {
+        .google-modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(40, 25, 45, 0.55);
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          background: rgba(30, 20, 35, 0.45);
           backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 10000;
-          padding: 16px;
-          animation: recFadeIn 0.22s ease-out;
+          z-index: 999999;
+          padding: 14px;
+          overflow-y: auto;
+          overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+          box-sizing: border-box;
+          animation: gFadeIn 0.18s ease-out;
         }
-        @keyframes recFadeIn {
+        @keyframes gFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        .recurrence-modal-card {
+        .google-modal-card {
+          margin: auto;
           width: 100%;
-          max-width: 540px;
+          max-width: 380px;
+          max-height: calc(100dvh - 28px);
           background: #FFFFFF;
-          border-radius: 20px;
-          box-shadow: 0 16px 40px rgba(74, 63, 85, 0.22);
-          border: 2px solid #F4A6C1;
-          padding: 24px;
+          border-radius: 28px;
+          box-shadow: 0 14px 38px rgba(74, 63, 85, 0.2), 0 4px 12px rgba(244, 166, 193, 0.3);
+          border: 1.5px solid rgba(244, 166, 193, 0.7);
+          padding: 24px 26px 20px 26px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
-          position: relative;
-          animation: recCardSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          overflow-y: auto;
+          box-sizing: border-box;
+          animation: gCardSlide 0.22s cubic-bezier(0.18, 0.9, 0.32, 1);
         }
-        @keyframes recCardSlide {
-          from { transform: translateY(18px) scale(0.97); }
+        @keyframes gCardSlide {
+          from { transform: translateY(14px) scale(0.96); }
           to { transform: translateY(0) scale(1); }
         }
-        .recurrence-modal-header {
+        .google-modal-title {
+          margin: 0 0 4px 0;
+          font-family: 'Comfortaa', cursive, system-ui, -apple-system, sans-serif;
+          font-size: 1.28rem;
+          font-weight: 700;
+          color: #2D2535;
+          line-height: 1.3;
+        }
+        .google-modal-subtitle {
+          margin: 0 0 14px 0;
+          font-size: 0.82rem;
+          color: #8C7B99;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .google-radio-group {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin: 12px 0 16px 0;
+        }
+        .google-radio-row {
           display: flex;
           align-items: center;
-          gap: 12px;
-          border-bottom: 1px dashed rgba(244, 166, 193, 0.6);
-          padding-bottom: 14px;
+          gap: 14px;
+          padding: 10px 10px;
+          border-radius: 12px;
+          cursor: pointer;
+          user-select: none;
+          transition: background 0.15s ease;
         }
-        .header-icon-badge {
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
+        .google-radio-row:hover {
           background: #FFF0F4;
+        }
+        .google-radio-row.selected {
+          background: rgba(255, 240, 244, 0.65);
+        }
+        .google-radio-circle {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          border: 2px solid #8C7B99;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.4rem;
           flex-shrink: 0;
-          border: 1px solid #F4A6C1;
+          transition: border-color 0.18s ease;
         }
-        .recurrence-modal-header h3 {
-          margin: 0;
-          font-size: 1.18rem;
-          color: #D4566A;
-          font-family: 'Caveat', cursive, sans-serif;
+        .google-radio-row.selected .google-radio-circle {
+          border-color: #D4566A;
+        }
+        .google-radio-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: #D4566A;
+          animation: gDotPop 0.15s ease-out;
+        }
+        @keyframes gDotPop {
+          from { transform: scale(0); }
+          to { transform: scale(1); }
+        }
+        .google-radio-label {
+          font-family: 'Comfortaa', cursive, system-ui, -apple-system, sans-serif;
+          font-size: 0.95rem;
+          color: #3C3345;
+          font-weight: 600;
+        }
+        .google-radio-row.selected .google-radio-label {
+          color: #2D2535;
           font-weight: 700;
         }
-        .recurrence-modal-header .subtitle {
-          margin: 2px 0 0 0;
-          font-size: 0.8rem;
-          color: #8C7B99;
-        }
-        .btn-close-modal {
-          margin-left: auto;
-          background: none;
-          border: none;
-          font-size: 1.6rem;
-          line-height: 1;
-          color: #8C7B99;
-          cursor: pointer;
-          transition: color 0.2s;
-        }
-        .btn-close-modal:hover {
-          color: #D4566A;
-        }
-        .expense-context-pill {
+        .google-modal-actions {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 8px;
-          background: #FFF0F4;
-          padding: 8px 14px;
-          border-radius: 12px;
-          border: 1px solid rgba(244, 166, 193, 0.4);
-          font-size: 0.86rem;
-          color: #4A3F55;
-        }
-        .scope-prompt-text {
-          margin: 0;
-          font-size: 0.92rem;
-          font-weight: 600;
-          color: #4A3F55;
-        }
-        .scope-options-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .scope-option-btn {
-          display: flex;
-          align-items: flex-start;
-          gap: 14px;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1.5px solid #E5E7EB;
-          background: #FAFAFA;
-          cursor: pointer;
-          text-align: left;
-          transition: all 0.2s ease;
-          font-family: inherit;
-        }
-        .scope-option-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(212, 86, 106, 0.12);
-        }
-        .scope-option-btn.scope-single:hover {
-          background: #FFF9FA;
-          border-color: #F4A6C1;
-        }
-        .scope-option-btn.scope-future:hover {
-          background: #F0F9FF;
-          border-color: #7BDCB5;
-        }
-        .scope-option-btn.scope-all:hover {
-          background: #F8F5FF;
-          border-color: #B28DFF;
-        }
-        .scope-icon-wrap {
-          font-size: 1.4rem;
-          line-height: 1;
-          padding-top: 2px;
-          flex-shrink: 0;
-        }
-        .scope-text-wrap h4 {
-          margin: 0 0 3px 0;
-          font-size: 0.96rem;
-          font-weight: 700;
-          color: #4A3F55;
-        }
-        .scope-text-wrap p {
-          margin: 0;
-          font-size: 0.8rem;
-          color: #6B7280;
-          line-height: 1.35;
-        }
-        .recurrence-modal-footer {
-          display: flex;
           justify-content: flex-end;
-          padding-top: 6px;
+          gap: 10px;
+          margin-top: 8px;
         }
-        .btn-cancel {
-          padding: 8px 18px;
-          font-size: 0.88rem;
+        .google-btn-text {
+          background: transparent;
+          border: none;
+          color: #D4566A;
+          font-family: 'Comfortaa', cursive, system-ui, sans-serif;
+          font-size: 0.92rem;
+          font-weight: 700;
+          padding: 8px 16px;
+          border-radius: 20px;
           cursor: pointer;
+          transition: background 0.18s ease;
+        }
+        .google-btn-text:hover {
+          background: #FFF0F4;
+        }
+        .google-btn-primary {
+          background: #D4566A;
+          border: none;
+          color: #FFFFFF;
+          font-family: 'Comfortaa', cursive, system-ui, sans-serif;
+          font-size: 0.92rem;
+          font-weight: 700;
+          padding: 8px 22px;
+          border-radius: 24px;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(212, 86, 106, 0.3);
+          transition: all 0.18s ease;
+        }
+        .google-btn-primary:hover {
+          background: #C04257;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(212, 86, 106, 0.4);
+        }
+        .google-btn-primary:active {
+          transform: translateY(0);
         }
       `}</style>
-    </div>
+      </div>
+    </ModalPortal>
   );
 };

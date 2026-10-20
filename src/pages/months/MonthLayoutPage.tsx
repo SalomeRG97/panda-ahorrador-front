@@ -6,6 +6,7 @@ import { Category, BudgetExpense, ExtraExpense, Income, Week, MonthChallengeData
 import { formatCurrency } from '../../utils/formatters';
 import { PaymentMethodSelect } from '../../components/PaymentMethodSelect';
 import { RecurrenceScopeModal } from '../../components/common/RecurrenceScopeModal';
+import { ModalPortal } from '../../components/common/ModalPortal';
 
 export const MonthLayoutPage: React.FC = () => {
   const { yearId, monthId } = useParams<{ yearId: string; monthId: string }>();
@@ -1038,208 +1039,214 @@ export const MonthLayoutPage: React.FC = () => {
 
       {/* MODAL CREAR GASTO EN CALENDARIO */}
       {showExpenseModal && (
-        <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingExpenseId ? '✏️ Editar Gasto Presupuestado' : '🌸 Agregar Gasto Presupuestado'}</h3>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Fecha:</label>
-                <input
-                  type="date"
-                  value={newExpense.date || ''}
-                  onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
-                  className="form-input"
-                />
+        <ModalPortal isOpen={showExpenseModal}>
+          <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{editingExpenseId ? '✏️ Editar Gasto Presupuestado' : '🌸 Agregar Gasto Presupuestado'}</h3>
               </div>
-              <div className="form-group">
-                <label>Categoría:</label>
-                <select
-                  value={newExpense.category_id || categories[0]?.id}
-                  onChange={(e) => setNewExpense({ ...newExpense, category_id: parseInt(e.target.value) })}
-                  className="form-input"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.icon} {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Concepto / Detalle:</label>
-                <input
-                  type="text"
-                  value={newExpense.concept || ''}
-                  onChange={(e) => setNewExpense({ ...newExpense, concept: e.target.value })}
-                  placeholder="Ej: Servicio de luz"
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label>Medio de Pago:</label>
-                <PaymentMethodSelect
-                  value={newExpense.payment_method || ''}
-                  methods={paymentMethods}
-                  onChange={(pm) => setNewExpense({ ...newExpense, payment_method: pm })}
-                  className="form-input"
-                />
-              </div>
-              {!editingExpenseId && (
-                <>
-                  <div className="form-group">
-                    <label>Repetir:</label>
-                    <select
-                      value={newExpense.recurrence?.frequency || ''}
-                      onChange={(e) =>
-                        setNewExpense({
-                          ...newExpense,
-                          recurrence: e.target.value
-                            ? { frequency: e.target.value as RecurrenceFrequency, end_date: newExpense.recurrence?.end_date || null }
-                            : undefined,
-                        })
-                      }
-                      className="form-input"
-                    >
-                      <option value="">No se repite</option>
-                      <option value="daily">Diariamente</option>
-                      <option value="weekly">Semanalmente</option>
-                      <option value="biweekly">Cada 2 semanas</option>
-                      <option value="monthly">Mensualmente</option>
-                      <option value="yearly">Anualmente</option>
-                    </select>
-                  </div>
-                  {newExpense.recurrence && (
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Fecha:</label>
+                  <input
+                    type="date"
+                    value={newExpense.date || ''}
+                    onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Categoría:</label>
+                  <select
+                    value={newExpense.category_id || categories[0]?.id}
+                    onChange={(e) => setNewExpense({ ...newExpense, category_id: parseInt(e.target.value) })}
+                    className="form-input"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Concepto / Detalle:</label>
+                  <input
+                    type="text"
+                    value={newExpense.concept || ''}
+                    onChange={(e) => setNewExpense({ ...newExpense, concept: e.target.value })}
+                    placeholder="Ej: Servicio de luz"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Medio de Pago:</label>
+                  <PaymentMethodSelect
+                    value={newExpense.payment_method || ''}
+                    methods={paymentMethods}
+                    onChange={(pm) => setNewExpense({ ...newExpense, payment_method: pm })}
+                    className="form-input"
+                  />
+                </div>
+                {!editingExpenseId && (
+                  <>
                     <div className="form-group">
-                      <label>Repetir hasta (opcional):</label>
-                      <input
-                        type="date"
-                        value={newExpense.recurrence.end_date || ''}
-                        min={newExpense.date || undefined}
+                      <label>Repetir:</label>
+                      <select
+                        value={newExpense.recurrence?.frequency || ''}
                         onChange={(e) =>
                           setNewExpense({
                             ...newExpense,
-                            recurrence: { ...newExpense.recurrence!, end_date: e.target.value || null },
+                            recurrence: e.target.value
+                              ? { frequency: e.target.value as RecurrenceFrequency, end_date: newExpense.recurrence?.end_date || null }
+                              : undefined,
                           })
                         }
                         className="form-input"
-                      />
-                      <small style={{ opacity: 0.7 }}>
-                        Sin fecha final: se agrega en todos los meses creados y en los años que crees después. El valor real de cada ocurrencia es independiente.
-                      </small>
+                      >
+                        <option value="">No se repite</option>
+                        <option value="daily">Diariamente</option>
+                        <option value="weekly">Semanalmente</option>
+                        <option value="biweekly">Cada 2 semanas</option>
+                        <option value="monthly">Mensualmente</option>
+                        <option value="yearly">Anualmente</option>
+                      </select>
                     </div>
-                  )}
-                </>
-              )}
-              <div className="form-group">
-                <label>Monto Presupuestado ($):</label>
-                <input
-                  type="number"
-                  value={newExpense.budget_amount || ''}
-                  onChange={(e) => setNewExpense({ ...newExpense, budget_amount: parseFloat(e.target.value) || 0 })}
-                  className="form-input"
-                />
+                    {newExpense.recurrence && (
+                      <div className="form-group">
+                        <label>Repetir hasta (opcional):</label>
+                        <input
+                          type="date"
+                          value={newExpense.recurrence.end_date || ''}
+                          min={newExpense.date || undefined}
+                          onChange={(e) =>
+                            setNewExpense({
+                              ...newExpense,
+                              recurrence: { ...newExpense.recurrence!, end_date: e.target.value || null },
+                            })
+                          }
+                          className="form-input"
+                        />
+                        <small style={{ opacity: 0.7 }}>
+                          Sin fecha final: se agrega en todos los meses creados y en los años que crees después. El valor real de cada ocurrencia es independiente.
+                        </small>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="form-group">
+                  <label>Monto Presupuestado ($):</label>
+                  <input
+                    type="number"
+                    value={newExpense.budget_amount || ''}
+                    onChange={(e) => setNewExpense({ ...newExpense, budget_amount: parseFloat(e.target.value) || 0 })}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button onClick={() => setShowExpenseModal(false)} className="btn-pastel btn-secondary-pastel">
+                  Cancelar
+                </button>
+                <button onClick={saveBudgetExpense} className="btn-pastel btn-primary-pastel">
+                  {editingExpenseId ? 'Guardar Cambios' : 'Guardar Gasto'}
+                </button>
               </div>
             </div>
-            <div className="modal-footer">
-              <button onClick={() => setShowExpenseModal(false)} className="btn-pastel btn-secondary-pastel">
-                Cancelar
-              </button>
-              <button onClick={saveBudgetExpense} className="btn-pastel btn-primary-pastel">
-                {editingExpenseId ? 'Guardar Cambios' : 'Guardar Gasto'}
-              </button>
-            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* POPUP DETALLE DE GASTO */}
       {selectedExpense && (
-        <div className="modal-overlay" onClick={() => setSelectedExpense(null)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Detalle del Gasto</h3>
-            </div>
-            <div className="modal-body">
-              <div className="badge-category" style={{ backgroundColor: selectedExpense.category_color }}>
-                {selectedExpense.category_icon} {selectedExpense.category_name}
+        <ModalPortal isOpen={!!selectedExpense}>
+          <div className="modal-overlay" onClick={() => setSelectedExpense(null)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Detalle del Gasto</h3>
               </div>
-              <h2 style={{ marginTop: '12px' }}>{selectedExpense.concept}</h2>
-              <p>Fecha: <strong>{selectedExpense.date}</strong></p>
-              {selectedExpense.recurrence_id && (
-                <p>Repetición: <strong>🔁 Recurrente</strong></p>
-              )}
-              {selectedExpense.payment_method && (
-                <p>Medio de Pago: <strong>{selectedExpense.payment_method}</strong></p>
-              )}
-              <p>Monto Presupuestado: <strong>{formatCurrency(selectedExpense.budget_amount)}</strong></p>
-              {selectedExpense.real_amount !== undefined && (
-                <p>Monto Real: <strong>{formatCurrency(selectedExpense.real_amount)}</strong></p>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button onClick={() => deleteBudgetExpense(selectedExpense)} className="btn-pastel btn-delete-sm">
-                Eliminar
-              </button>
-              <button onClick={() => openEditExpenseModal(selectedExpense)} className="btn-pastel btn-secondary-pastel">
-                <i className="fa-solid fa-pen"></i> Editar
-              </button>
-              <button onClick={() => setSelectedExpense(null)} className="btn-pastel btn-primary-pastel">
-                Cerrar
-              </button>
+              <div className="modal-body">
+                <div className="badge-category" style={{ backgroundColor: selectedExpense.category_color }}>
+                  {selectedExpense.category_icon} {selectedExpense.category_name}
+                </div>
+                <h2 style={{ marginTop: '12px' }}>{selectedExpense.concept}</h2>
+                <p>Fecha: <strong>{selectedExpense.date}</strong></p>
+                {selectedExpense.recurrence_id && (
+                  <p>Repetición: <strong>🔁 Recurrente</strong></p>
+                )}
+                {selectedExpense.payment_method && (
+                  <p>Medio de Pago: <strong>{selectedExpense.payment_method}</strong></p>
+                )}
+                <p>Monto Presupuestado: <strong>{formatCurrency(selectedExpense.budget_amount)}</strong></p>
+                {selectedExpense.real_amount !== undefined && (
+                  <p>Monto Real: <strong>{formatCurrency(selectedExpense.real_amount)}</strong></p>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button onClick={() => deleteBudgetExpense(selectedExpense)} className="btn-pastel btn-delete-sm">
+                  Eliminar
+                </button>
+                <button onClick={() => openEditExpenseModal(selectedExpense)} className="btn-pastel btn-secondary-pastel">
+                  <i className="fa-solid fa-pen"></i> Editar
+                </button>
+                <button onClick={() => setSelectedExpense(null)} className="btn-pastel btn-primary-pastel">
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* MODAL CREAR / EDITAR INGRESO */}
       {showIncomeModal && (
-        <div className="modal-overlay" onClick={() => setShowIncomeModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>💰 {editingIncomeId ? 'Editar Ingreso' : 'Agregar Nuevo Ingreso'}</h3>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Fecha:</label>
-                <input
-                  type="date"
-                  value={newIncome.date || ''}
-                  onChange={(e) => setNewIncome({ ...newIncome, date: e.target.value })}
-                  className="form-input"
-                />
+        <ModalPortal isOpen={showIncomeModal}>
+          <div className="modal-overlay" onClick={() => setShowIncomeModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>💰 {editingIncomeId ? 'Editar Ingreso' : 'Agregar Nuevo Ingreso'}</h3>
               </div>
-              <div className="form-group">
-                <label>Concepto:</label>
-                <input
-                  type="text"
-                  value={newIncome.concept || ''}
-                  onChange={(e) => setNewIncome({ ...newIncome, concept: e.target.value })}
-                  placeholder="Ej: Salario quincenal"
-                  className="form-input"
-                />
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Fecha:</label>
+                  <input
+                    type="date"
+                    value={newIncome.date || ''}
+                    onChange={(e) => setNewIncome({ ...newIncome, date: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Concepto:</label>
+                  <input
+                    type="text"
+                    value={newIncome.concept || ''}
+                    onChange={(e) => setNewIncome({ ...newIncome, concept: e.target.value })}
+                    placeholder="Ej: Salario quincenal"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Valor ($):</label>
+                  <input
+                    type="number"
+                    value={newIncome.amount || ''}
+                    onChange={(e) => setNewIncome({ ...newIncome, amount: parseFloat(e.target.value) || 0 })}
+                    className="form-input"
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label>Valor ($):</label>
-                <input
-                  type="number"
-                  value={newIncome.amount || ''}
-                  onChange={(e) => setNewIncome({ ...newIncome, amount: parseFloat(e.target.value) || 0 })}
-                  className="form-input"
-                />
+              <div className="modal-footer">
+                <button onClick={() => setShowIncomeModal(false)} className="btn-pastel btn-secondary-pastel">
+                  Cancelar
+                </button>
+                <button onClick={saveIncome} className="btn-pastel btn-primary-pastel">
+                  {editingIncomeId ? 'Actualizar Ingreso' : 'Guardar Ingreso'}
+                </button>
               </div>
-            </div>
-            <div className="modal-footer">
-              <button onClick={() => setShowIncomeModal(false)} className="btn-pastel btn-secondary-pastel">
-                Cancelar
-              </button>
-              <button onClick={saveIncome} className="btn-pastel btn-primary-pastel">
-                {editingIncomeId ? 'Actualizar Ingreso' : 'Guardar Ingreso'}
-              </button>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* MODAL DE ALCANCE PARA GASTOS RECURRENTES */}
@@ -1306,8 +1313,6 @@ export const MonthLayoutPage: React.FC = () => {
         .bg-ingresos { background: #EAF6F0; color: #1E4E36; }
         .bg-gastos { background: #FDEEF4; color: #6A1B3B; }
         .bg-ahorros { background: #FFF9EB; color: #5B4810; }
-        .modal-header { margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1.5px dashed #F4A6C1; }
-        .modal-header h3 { font-size: 1.3rem; color: #D4566A; margin: 0; }
         .challenge-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
         .challenge-icon-big { font-size: 3rem; }
         .progress-bar-wrapper { margin-bottom: 24px; }
@@ -1322,7 +1327,6 @@ export const MonthLayoutPage: React.FC = () => {
         .challenge-day-card.completed { background: #FFE5EC; border-color: #D4566A; transform: scale(1.03); }
         .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
         .form-input { padding: 8px 12px; border-radius: 10px; border: 1.5px solid #F4A6C1; outline: none; font-size: 0.9rem; width: 100%; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
         .btn-icon-danger { background: #FFE5EC; border: 1px solid #F4A6C1; color: #D4566A; cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: background 0.2s ease; }
         .btn-icon-danger:hover { background: #D4566A; color: white; }
         @media (max-width: 900px) {

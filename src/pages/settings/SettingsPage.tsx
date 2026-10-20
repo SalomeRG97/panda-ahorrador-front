@@ -4,8 +4,8 @@ import { useToast } from '../../context/ToastContext';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { Category } from '../../types';
-
 import { getAvatarUrl } from '../../config/environment';
+import { ModalPortal } from '../../components/common/ModalPortal';
 
 export const SettingsPage: React.FC = () => {
   const { currentUser, reloadProfile } = useAuth();
@@ -514,107 +514,111 @@ export const SettingsPage: React.FC = () => {
 
       {/* MODAL MEDIO DE PAGO */}
       {showPmModal && (
-        <div className="modal-overlay" onClick={() => setShowPmModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingPmId ? '💳 Editar Medio de Pago' : '💳 Nuevo Medio de Pago'}</h3>
-              <button onClick={() => setShowPmModal(false)} className="close-btn">&times;</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Nombre:</label>
-                <input
-                  type="text"
-                  value={pmName}
-                  maxLength={50}
-                  onChange={(e) => setPmName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && savePaymentMethod()}
-                  placeholder="Ej: Visa, Efectivo, Nequi"
-                  className="form-control"
-                  autoFocus
-                />
+        <ModalPortal isOpen={showPmModal}>
+          <div className="modal-overlay" onClick={() => setShowPmModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{editingPmId ? '💳 Editar Medio de Pago' : '💳 Nuevo Medio de Pago'}</h3>
+                <button onClick={() => setShowPmModal(false)} className="close-btn">&times;</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Nombre:</label>
+                  <input
+                    type="text"
+                    value={pmName}
+                    maxLength={50}
+                    onChange={(e) => setPmName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && savePaymentMethod()}
+                    placeholder="Ej: Visa, Efectivo, Nequi"
+                    className="form-control"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button onClick={() => setShowPmModal(false)} className="btn-pastel btn-secondary-pastel">
+                  Cancelar
+                </button>
+                <button onClick={savePaymentMethod} className="btn-pastel btn-primary-pastel">
+                  <i className="fa-solid fa-check"></i> Guardar
+                </button>
               </div>
             </div>
-            <div className="modal-footer">
-              <button onClick={() => setShowPmModal(false)} className="btn-pastel btn-secondary-pastel">
-                Cancelar
-              </button>
-              <button onClick={savePaymentMethod} className="btn-pastel btn-primary-pastel">
-                <i className="fa-solid fa-check"></i> Guardar
-              </button>
-            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* MODAL CREAR/EDITAR CATEGORÍA */}
       {showCatModal && (
-        <div className="modal-overlay" onClick={() => setShowCatModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingCatId ? '🌸 Editar Categoría' : '🌸 Crear Categoría Personal'}</h3>
-              <button onClick={() => setShowCatModal(false)} className="close-btn">&times;</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Nombre de la Categoría:</label>
-                <input
-                  type="text"
-                  value={catForm.name}
-                  onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
-                  placeholder="Ej: Suscripciones, Educación"
-                  className="form-control"
-                />
+        <ModalPortal isOpen={showCatModal}>
+          <div className="modal-overlay" onClick={() => setShowCatModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{editingCatId ? '🌸 Editar Categoría' : '🌸 Crear Categoría Personal'}</h3>
+                <button onClick={() => setShowCatModal(false)} className="close-btn">&times;</button>
               </div>
-              <div className="form-group">
-                <label>Icono / Emoji:</label>
-                <div className="emoji-picker-row">
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Nombre de la Categoría:</label>
                   <input
                     type="text"
-                    value={catForm.icon}
-                    onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })}
-                    maxLength={4}
-                    placeholder="Ej: 📺"
-                    className="form-control emoji-input"
+                    value={catForm.name}
+                    onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
+                    placeholder="Ej: Suscripciones, Educación"
+                    className="form-control"
                   />
-                  <div className="emoji-shortcuts">
-                    {['📺', '📚', '🎮', '✈️', '💊', '🛍️', '☕', '🏋️'].map((emoji) => (
-                      <span key={emoji} onClick={() => setCatForm({ ...catForm, icon: emoji })}>
-                        {emoji}
-                      </span>
-                    ))}
+                </div>
+                <div className="form-group">
+                  <label>Icono / Emoji:</label>
+                  <div className="emoji-picker-row">
+                    <input
+                      type="text"
+                      value={catForm.icon}
+                      onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })}
+                      maxLength={4}
+                      placeholder="Ej: 📺"
+                      className="form-control emoji-input"
+                    />
+                    <div className="emoji-shortcuts">
+                      {['📺', '📚', '🎮', '✈️', '💊', '🛍️', '☕', '🏋️'].map((emoji) => (
+                        <span key={emoji} onClick={() => setCatForm({ ...catForm, icon: emoji })}>
+                          {emoji}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Color representativo:</label>
+                  <div className="color-picker-row">
+                    <input
+                      type="color"
+                      value={catForm.color}
+                      onChange={(e) => setCatForm({ ...catForm, color: e.target.value })}
+                      className="color-picker-input"
+                    />
+                    <input
+                      type="text"
+                      value={catForm.color}
+                      onChange={(e) => setCatForm({ ...catForm, color: e.target.value })}
+                      className="form-control hex-input"
+                      placeholder="#F4A6C1"
+                    />
                   </div>
                 </div>
               </div>
-              <div className="form-group">
-                <label>Color representativo:</label>
-                <div className="color-picker-row">
-                  <input
-                    type="color"
-                    value={catForm.color}
-                    onChange={(e) => setCatForm({ ...catForm, color: e.target.value })}
-                    className="color-picker-input"
-                  />
-                  <input
-                    type="text"
-                    value={catForm.color}
-                    onChange={(e) => setCatForm({ ...catForm, color: e.target.value })}
-                    className="form-control hex-input"
-                    placeholder="#F4A6C1"
-                  />
-                </div>
+              <div className="modal-footer">
+                <button onClick={() => setShowCatModal(false)} className="btn-pastel btn-secondary-pastel">
+                  Cancelar
+                </button>
+                <button onClick={saveCategory} className="btn-pastel btn-primary-pastel">
+                  <i className="fa-solid fa-check"></i> Guardar
+                </button>
               </div>
             </div>
-            <div className="modal-footer">
-              <button onClick={() => setShowCatModal(false)} className="btn-pastel btn-secondary-pastel">
-                Cancelar
-              </button>
-              <button onClick={saveCategory} className="btn-pastel btn-primary-pastel">
-                <i className="fa-solid fa-check"></i> Guardar
-              </button>
-            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       <style>{`
@@ -820,21 +824,7 @@ export const SettingsPage: React.FC = () => {
         .color-picker-input { width: 44px; height: 44px; border: none; border-radius: 8px; cursor: pointer; }
         .hex-input { width: 120px; }
 
-        .modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.45);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 2000;
-          padding: 20px;
-        }
-        .modal-card { width: 100%; max-width: 440px; padding: 24px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .close-btn { background: none; border: none; font-size: 1.6rem; cursor: pointer; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+        .close-btn { background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #888; }
 
         @media (max-width: 768px) {
           .settings-container { padding: 16px 12px; }

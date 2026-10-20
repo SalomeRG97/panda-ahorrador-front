@@ -6,6 +6,7 @@ import { Category, BudgetExpense, ExtraExpense, CategoryWeekTotal, PaymentMethod
 import { formatCurrency } from '../../utils/formatters';
 import { PaymentMethodSelect } from '../../components/PaymentMethodSelect';
 import { RecurrenceScopeModal } from '../../components/common/RecurrenceScopeModal';
+import { ModalPortal } from '../../components/common/ModalPortal';
 
 interface AmountInputProps {
   value: number | undefined | null;
@@ -746,161 +747,165 @@ export const WeekDetailPage: React.FC = () => {
 
       {/* MODAL CREAR GASTO EXTRA */}
       {showExtraModal && (
-        <div className="modal-overlay" onClick={() => setShowExtraModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>🌸 Agregar Gasto No Presupuestado</h3>
-              <button onClick={() => setShowExtraModal(false)} className="close-btn">&times;</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Fecha:</label>
-                <input
-                  type="date"
-                  value={newExtra.date || ''}
-                  onChange={(e) => setNewExtra({ ...newExtra, date: e.target.value })}
-                  className="form-input"
-                />
+        <ModalPortal isOpen={showExtraModal}>
+          <div className="modal-overlay" onClick={() => setShowExtraModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>🌸 Agregar Gasto No Presupuestado</h3>
+                <button onClick={() => setShowExtraModal(false)} className="close-btn">&times;</button>
               </div>
-              <div className="form-group">
-                <label>Categoría:</label>
-                <select
-                  value={newExtra.category_id || categories[0]?.id}
-                  onChange={(e) => setNewExtra({ ...newExtra, category_id: parseInt(e.target.value) })}
-                  className="form-input"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.icon} {c.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Fecha:</label>
+                  <input
+                    type="date"
+                    value={newExtra.date || ''}
+                    onChange={(e) => setNewExtra({ ...newExtra, date: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Categoría:</label>
+                  <select
+                    value={newExtra.category_id || categories[0]?.id}
+                    onChange={(e) => setNewExtra({ ...newExtra, category_id: parseInt(e.target.value) })}
+                    className="form-input"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Concepto / Detalle:</label>
+                  <input
+                    type="text"
+                    value={newExtra.concept || ''}
+                    onChange={(e) => setNewExtra({ ...newExtra, concept: e.target.value })}
+                    placeholder="Ej: Salida espontánea a cenar"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Medio de Pago:</label>
+                  <PaymentMethodSelect
+                    value={newExtra.payment_method || ''}
+                    methods={paymentMethods}
+                    onChange={(pm) => setNewExtra({ ...newExtra, payment_method: pm })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Monto Real Gastado ($):</label>
+                  <input
+                    type="number"
+                    value={newExtra.amount || ''}
+                    onChange={(e) => setNewExtra({ ...newExtra, amount: parseFloat(e.target.value) || 0 })}
+                    className="form-input"
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label>Concepto / Detalle:</label>
-                <input
-                  type="text"
-                  value={newExtra.concept || ''}
-                  onChange={(e) => setNewExtra({ ...newExtra, concept: e.target.value })}
-                  placeholder="Ej: Salida espontánea a cenar"
-                  className="form-input"
-                />
+              <div className="modal-footer">
+                <button onClick={() => setShowExtraModal(false)} className="btn-pastel btn-secondary-pastel">
+                  Cancelar
+                </button>
+                <button onClick={saveExtraExpense} className="btn-pastel btn-primary-pastel">
+                  Guardar Gasto Extra
+                </button>
               </div>
-              <div className="form-group">
-                <label>Medio de Pago:</label>
-                <PaymentMethodSelect
-                  value={newExtra.payment_method || ''}
-                  methods={paymentMethods}
-                  onChange={(pm) => setNewExtra({ ...newExtra, payment_method: pm })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label>Monto Real Gastado ($):</label>
-                <input
-                  type="number"
-                  value={newExtra.amount || ''}
-                  onChange={(e) => setNewExtra({ ...newExtra, amount: parseFloat(e.target.value) || 0 })}
-                  className="form-input"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button onClick={() => setShowExtraModal(false)} className="btn-pastel btn-secondary-pastel">
-                Cancelar
-              </button>
-              <button onClick={saveExtraExpense} className="btn-pastel btn-primary-pastel">
-                Guardar Gasto Extra
-              </button>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* MODAL EDITAR GASTO PRESUPUESTADO */}
       {showEditBudgetModal && editingBudgetExpense && (
-        <div className="modal-overlay" onClick={() => setShowEditBudgetModal(false)}>
-          <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>✏️ Editar Gasto Presupuestado</h3>
-              {editingBudgetExpense.recurrence_id && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#8C7B99' }}>
-                  🔁 Este gasto es parte de una serie recurrente
-                </p>
-              )}
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Fecha:</label>
-                <input
-                  type="date"
-                  value={editingBudgetExpense.date || ''}
-                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, date: e.target.value })}
-                  className="form-input"
-                />
+        <ModalPortal isOpen={showEditBudgetModal}>
+          <div className="modal-overlay" onClick={() => setShowEditBudgetModal(false)}>
+            <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>✏️ Editar Gasto Presupuestado</h3>
+                {editingBudgetExpense.recurrence_id && (
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#8C7B99' }}>
+                    🔁 Este gasto es parte de una serie recurrente
+                  </p>
+                )}
               </div>
-              <div className="form-group">
-                <label>Categoría:</label>
-                <select
-                  value={editingBudgetExpense.category_id}
-                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, category_id: parseInt(e.target.value) })}
-                  className="form-input"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.icon} {c.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Fecha:</label>
+                  <input
+                    type="date"
+                    value={editingBudgetExpense.date || ''}
+                    onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, date: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Categoría:</label>
+                  <select
+                    value={editingBudgetExpense.category_id}
+                    onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, category_id: parseInt(e.target.value) })}
+                    className="form-input"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Concepto / Detalle:</label>
+                  <input
+                    type="text"
+                    value={editingBudgetExpense.concept || ''}
+                    onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, concept: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Medio de Pago:</label>
+                  <PaymentMethodSelect
+                    value={editingBudgetExpense.payment_method || ''}
+                    methods={paymentMethods}
+                    onChange={(pm) => setEditingBudgetExpense({ ...editingBudgetExpense, payment_method: pm })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Monto Presupuestado ($):</label>
+                  <input
+                    type="number"
+                    value={editingBudgetExpense.budget_amount || ''}
+                    onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, budget_amount: parseFloat(e.target.value) || 0 })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Valor Real Gastado ($) (Opcional):</label>
+                  <input
+                    type="number"
+                    value={editingBudgetExpense.real_amount ?? ''}
+                    onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, real_amount: parseFloat(e.target.value) || 0 })}
+                    className="form-input"
+                    placeholder="0"
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label>Concepto / Detalle:</label>
-                <input
-                  type="text"
-                  value={editingBudgetExpense.concept || ''}
-                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, concept: e.target.value })}
-                  className="form-input"
-                />
+              <div className="modal-footer">
+                <button onClick={() => setShowEditBudgetModal(false)} className="btn-pastel btn-secondary-pastel">
+                  Cancelar
+                </button>
+                <button onClick={handleSaveEditedBudget} className="btn-pastel btn-primary-pastel">
+                  Guardar Cambios
+                </button>
               </div>
-              <div className="form-group">
-                <label>Medio de Pago:</label>
-                <PaymentMethodSelect
-                  value={editingBudgetExpense.payment_method || ''}
-                  methods={paymentMethods}
-                  onChange={(pm) => setEditingBudgetExpense({ ...editingBudgetExpense, payment_method: pm })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label>Monto Presupuestado ($):</label>
-                <input
-                  type="number"
-                  value={editingBudgetExpense.budget_amount || ''}
-                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, budget_amount: parseFloat(e.target.value) || 0 })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label>Valor Real Gastado ($) (Opcional):</label>
-                <input
-                  type="number"
-                  value={editingBudgetExpense.real_amount ?? ''}
-                  onChange={(e) => setEditingBudgetExpense({ ...editingBudgetExpense, real_amount: parseFloat(e.target.value) || 0 })}
-                  className="form-input"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button onClick={() => setShowEditBudgetModal(false)} className="btn-pastel btn-secondary-pastel">
-                Cancelar
-              </button>
-              <button onClick={handleSaveEditedBudget} className="btn-pastel btn-primary-pastel">
-                Guardar Cambios
-              </button>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* MODAL DE ALCANCE PARA GASTOS RECURRENTES */}
@@ -1056,22 +1061,9 @@ export const WeekDetailPage: React.FC = () => {
           color: #8C7B99;
           margin-top: 2px;
         }
-        .modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 2000;
-          padding: 20px;
-        }
-        .modal-card { width: 100%; max-width: 450px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .close-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #888; }
         .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
         .form-input { padding: 8px 12px; border-radius: 10px; border: 1.5px solid #F4A6C1; outline: none; width: 100%; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 
         @media (max-width: 768px) {
           .week-container { margin: 14px auto; padding: 0 12px; gap: 16px; }

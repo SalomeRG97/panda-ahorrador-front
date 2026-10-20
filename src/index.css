@@ -255,24 +255,162 @@ p, span, button, input, select, table {
   transform: translateY(2px);
 }
 
-/* Modales Responsivos */
+/* Modales Responsivos y a prueba de cortes */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px);
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(30, 20, 35, 0.55);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
-  padding: 16px;
+  z-index: 99999;
+  padding: clamp(10px, 3vh, 24px) 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .modal-card {
+  margin: auto;
   width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
+  max-width: 520px;
+  max-height: calc(100dvh - 28px);
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 2px solid #F4A6C1;
+  box-shadow: 0 16px 40px rgba(212, 86, 106, 0.22);
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: modalScaleUp 0.2s cubic-bezier(0.18, 0.9, 0.32, 1);
+}
+
+/* Los modales también usan .card-pastel: anulamos su padding y el salto al pasar el mouse */
+.modal-card.card-pastel {
+  padding: 0;
+}
+
+.modal-card.card-pastel:hover {
+  transform: none;
+  box-shadow: 0 16px 40px rgba(212, 86, 106, 0.22);
+}
+
+@keyframes modalScaleUp {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-card > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modal-header {
+  flex-shrink: 0;
+  padding: 16px 20px 12px;
+  border-bottom: 1.5px dashed #F4A6C1;
+  background: linear-gradient(135deg, #FFF0F4 0%, #FFFFFF 100%);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #D4566A;
+  font-size: 1.25rem;
+}
+
+/* Botón × siempre en la esquina superior derecha del encabezado */
+.modal-header {
+  position: relative;
+}
+
+.modal-header:has(.close-btn) {
+  padding-right: 48px;
+}
+
+.modal-header .close-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #8C7B99;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.modal-header .close-btn:hover {
+  background: #FFE5EC;
+  color: #D4566A;
+}
+
+.modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #F4A6C1;
+  border-radius: 10px;
+}
+
+.modal-footer {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border-top: 1.5px solid #FFE5EC;
+  background: #FFF9FA;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .modal-overlay {
+    padding: 8px 10px;
+  }
+  .modal-card {
+    max-height: calc(100dvh - 16px);
+    border-radius: 16px;
+  }
+  .modal-header {
+    padding: 12px 14px 10px;
+  }
+  .modal-body {
+    padding: 12px 14px;
+  }
+  .modal-footer {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+  .modal-footer .btn-pastel {
+    flex: 1 1 auto;
+    width: auto;
+    justify-content: center;
+  }
 }
 
 /* App Layout */
@@ -308,7 +446,6 @@ p, span, button, input, select, table {
 @media (max-width: 768px) {
   .modal-card {
     max-width: 95vw;
-    padding: 18px 16px;
   }
 }
 
@@ -344,7 +481,8 @@ p, span, button, input, select, table {
   right: 0 !important;
   bottom: 0 !important;
   width: 100vw !important;
-  height: 100vh !important;
+  height: 100dvh !important;
+  overflow-y: auto;
   background: rgba(45, 30, 50, 0.55) !important;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
