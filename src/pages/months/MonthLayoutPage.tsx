@@ -24,6 +24,7 @@ export const MonthLayoutPage: React.FC = () => {
   const [challengeData, setChallengeData] = useState<MonthChallengeData | null>(null);
 
   const [monthSaving, setMonthSaving] = useState<number>(0);
+  const [savingsWithdrawn, setSavingsWithdrawn] = useState<number>(0);
   const [totalIncomes, setTotalIncomes] = useState<number>(0);
   const [totalExpenses, setTotalExpenses] = useState<number>(0);
   const [totalRemaining, setTotalRemaining] = useState<number>(0);
@@ -82,9 +83,24 @@ export const MonthLayoutPage: React.FC = () => {
     const expTotal = budgetSum + extraSum;
     const saving = data.saving || 0;
 
+    // Gastos pagados con ahorros: no descuentan del dinero libre del mes
+    const isFromSavings = (pm?: string) => (pm || '').trim().toLowerCase() === 'ahorros';
+    const withdrawn =
+      (data.budgetExpenses || []).reduce(
+        (sum: number, e: BudgetExpense) =>
+          sum + (isFromSavings(e.payment_method) ? parseFloat(e.real_amount as any) || 0 : 0),
+        0
+      ) +
+      (data.extraExpenses || []).reduce(
+        (sum: number, e: ExtraExpense) =>
+          sum + (isFromSavings(e.payment_method) ? parseFloat(e.amount as any) || 0 : 0),
+        0
+      );
+
     setTotalIncomes(incTotal);
     setTotalExpenses(expTotal);
-    setTotalRemaining(incTotal - expTotal - saving);
+    setSavingsWithdrawn(withdrawn);
+    setTotalRemaining(incTotal - (expTotal - withdrawn) - saving);
 
     // Payment methods breakdown (Real / Gastado)
     const budgetExpenses: BudgetExpense[] = data.budgetExpenses || [];
@@ -546,6 +562,13 @@ export const MonthLayoutPage: React.FC = () => {
                 />
                 <button onClick={saveMonthSaving} className="btn-pastel btn-primary-pastel">Guardar</button>
               </div>
+              <p style={{ fontSize: '0.85rem', margin: 0 }}>
+                Retirado de ahorros este mes: <strong>{formatCurrency(savingsWithdrawn)}</strong>
+                {' · '}Ahorro neto: <strong>{formatCurrency(monthSaving - savingsWithdrawn)}</strong>
+              </p>
+              <p style={{ fontSize: '0.75rem', margin: 0, opacity: 0.7 }}>
+                Para retirar, registra un gasto con medio de pago «Ahorros».
+              </p>
             </div>
           </div>
         </div>
@@ -596,8 +619,8 @@ export const MonthLayoutPage: React.FC = () => {
               <strong>{formatCurrency(totalExpenses)}</strong>
             </div>
             <div className="total-box bg-ahorros">
-              <span>Total Ahorro</span>
-              <strong>{formatCurrency(monthSaving)}</strong>
+              <span>Total Ahorro (neto)</span>
+              <strong>{formatCurrency(monthSaving - savingsWithdrawn)}</strong>
             </div>
             <div className="total-box" style={{ background: '#A8D8EA', color: '#1E4B5E' }}>
               <span>Restante Libre</span>
@@ -837,11 +860,18 @@ export const MonthLayoutPage: React.FC = () => {
                 <label>Medio de Pago:</label>
                 <input
                   type="text"
+                  list="payment-method-options"
                   value={newExpense.payment_method || ''}
                   onChange={(e) => setNewExpense({ ...newExpense, payment_method: e.target.value })}
-                  placeholder="Ej: Débito, Efectivo"
+                  placeholder="Ej: Débito, Efectivo, Ahorros"
                   className="form-input"
                 />
+                <datalist id="payment-method-options">
+                  <option value="Ahorros" />
+                  <option value="Efectivo" />
+                  <option value="Débito" />
+                  <option value="Crédito" />
+                </datalist>
               </div>
               <div className="form-group">
                 <label>Monto Presupuestado ($):</label>

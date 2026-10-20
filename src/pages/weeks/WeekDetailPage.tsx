@@ -220,6 +220,12 @@ export const WeekDetailPage: React.FC = () => {
 
   return (
     <div className="week-container animate-fade-in-up">
+      <datalist id="payment-method-options">
+        <option value="Ahorros" />
+        <option value="Efectivo" />
+        <option value="Débito" />
+        <option value="Crédito" />
+      </datalist>
       {/* HEADER */}
       <div className="week-header card-pastel">
         <div>
@@ -339,6 +345,7 @@ export const WeekDetailPage: React.FC = () => {
                   <td>
                     <input
                       type="text"
+                      list="payment-method-options"
                       value={b.payment_method || ''}
                       onChange={(e) => {
                         const updated = { ...b, payment_method: e.target.value };
@@ -493,6 +500,7 @@ export const WeekDetailPage: React.FC = () => {
                   <td>
                     <input
                       type="text"
+                      list="payment-method-options"
                       value={ext.payment_method || ''}
                       onChange={(e) => {
                         const updated = { ...ext, payment_method: e.target.value };
@@ -662,9 +670,10 @@ export const WeekDetailPage: React.FC = () => {
                 <label>Medio de Pago:</label>
                 <input
                   type="text"
+                  list="payment-method-options"
                   value={newExtra.payment_method || ''}
                   onChange={(e) => setNewExtra({ ...newExtra, payment_method: e.target.value })}
-                  placeholder="Ej: Tarjeta débito, Efectivo"
+                  placeholder="Ej: Tarjeta débito, Efectivo, Ahorros"
                   className="form-input"
                 />
               </div>
