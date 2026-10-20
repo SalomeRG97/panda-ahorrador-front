@@ -64,6 +64,16 @@ export const MonthLayoutPage: React.FC = () => {
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [editingIncomeId, setEditingIncomeId] = useState<number | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<BudgetExpense | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+  const [editingRealAmount, setEditingRealAmount] = useState<number>(0);
+  const [calendarView, setCalendarView] = useState<'grid' | 'list'>(
+    (localStorage.getItem('budgetCalendarView') as 'grid' | 'list') || 'grid'
+  );
+
+  const changeCalendarView = (view: 'grid' | 'list') => {
+    setCalendarView(view);
+    localStorage.setItem('budgetCalendarView', view);
+  };
 
   const [newExpense, setNewExpense] = useState<Partial<BudgetExpense>>({ budget_amount: 0, concept: '', payment_method: '' });
   const [newIncome, setNewIncome] = useState<Partial<Income>>({ amount: 0, concept: '' });
@@ -281,6 +291,8 @@ export const MonthLayoutPage: React.FC = () => {
   };
 
   const openExpenseModal = (dateStr: string) => {
+    setEditingExpenseId(null);
+    setEditingRealAmount(0);
     setNewExpense({
       month_id: mId,
       date: dateStr,
@@ -292,15 +304,48 @@ export const MonthLayoutPage: React.FC = () => {
     setShowExpenseModal(true);
   };
 
+  const openEditExpenseModal = (exp: BudgetExpense) => {
+    setSelectedExpense(null);
+    setEditingExpenseId(exp.id || null);
+    setEditingRealAmount(parseFloat(exp.real_amount as any) || 0);
+    setNewExpense({
+      month_id: mId,
+      date: (exp.date || '').slice(0, 10),
+      category_id: exp.category_id || categories[0]?.id || 1,
+      concept: exp.concept,
+      budget_amount: parseFloat(exp.budget_amount as any) || 0,
+      payment_method: exp.payment_method || '',
+    });
+    setShowExpenseModal(true);
+  };
+
+  // Fecha por defecto al agregar desde la vista lista: hoy si está dentro del mes, si no el día 1
+  const defaultDateForMonth = () => {
+    const y = monthDetails.month.year;
+    const m = String(monthDetails.month.month_number).padStart(2, '0');
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return todayStr.startsWith(`${y}-${m}`) ? todayStr : `${y}-${m}-01`;
+  };
+
   const saveBudgetExpense = async () => {
     if (!newExpense.concept || !newExpense.budget_amount) {
       warning('Por favor ingresa concepto y monto');
       return;
     }
     try {
-      await ApiService.createBudgetExpense(newExpense as BudgetExpense);
-      success('Gasto presupuestado agregado 🌸');
+      if (editingExpenseId) {
+        await ApiService.updateBudgetExpense(editingExpenseId, {
+          ...newExpense,
+          real_amount: editingRealAmount,
+        } as BudgetExpense);
+        success('Gasto presupuestado actualizado 🌸');
+      } else {
+        await ApiService.createBudgetExpense(newExpense as BudgetExpense);
+        success('Gasto presupuestado agregado 🌸');
+      }
       setShowExpenseModal(false);
+      setEditingExpenseId(null);
       loadMonthData();
     } catch (err: any) {
       error(err.response?.data?.message || 'Error al guardar gasto');
@@ -438,7 +483,25 @@ export const MonthLayoutPage: React.FC = () => {
         <div className="tab-content card-pastel">
           <div className="calendar-header-actions">
             <h3>Calendario de Gastos Presupuestados</h3>
-            <p className="subtitle">Haz clic en cualquier día para programar un gasto o ver sus detalles.</p>
+            <p className="subtitle">
+              {calendarView === 'grid'
+                ? 'Haz clic en cualquier día para programar un gasto o en un gasto para ver/editar sus detalles.'
+                : 'Lista de gastos presupuestados del mes. Usa el lápiz para editar.'}
+            </p>
+            <div className="view-toggle">
+              <button
+                className={`view-toggle-btn ${calendarView === 'grid' ? 'active' : ''}`}
+                onClick={() => changeCalendarView('grid')}
+              >
+                <i className="fa-solid fa-calendar-days"></i> Calendario
+              </button>
+              <button
+                className={`view-toggle-btn ${calendarView === 'list' ? 'active' : ''}`}
+                onClick={() => changeCalendarView('list')}
+              >
+                <i className="fa-solid fa-list"></i> Lista
+              </button>
+            </div>
             <div className="weeks-shortcut">
               <span>Acceso a Semanas:</span>
               {monthDetails.weeks?.map((w: Week) => (
@@ -449,7 +512,84 @@ export const MonthLayoutPage: React.FC = () => {
             </div>
           </div>
 
+          {/* VISTA LISTA */}
+          {calendarView === 'list' && (
+            <div>
+              <div className="section-title-row" style={{ marginBottom: '12px' }}>
+                <strong>
+                  {(monthDetails.budgetExpenses || []).length} gastos · Presupuestado:{' '}
+                  {formatCurrency(
+                    (monthDetails.budgetExpenses || []).reduce(
+                      (s: number, e: BudgetExpense) => s + (parseFloat(e.budget_amount as any) || 0),
+                      0
+                    )
+                  )}
+                </strong>
+                <button onClick={() => openExpenseModal(defaultDateForMonth())} className="btn-pastel btn-primary-pastel">
+                  <i className="fa-solid fa-plus"></i> Agregar Gasto
+                </button>
+              </div>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Categoría</th>
+                      <th>Concepto</th>
+                      <th>Medio de Pago</th>
+                      <th>Presupuestado</th>
+                      <th>Real</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...(monthDetails.budgetExpenses || [])]
+                      .sort((a: BudgetExpense, b: BudgetExpense) => (a.date || '').localeCompare(b.date || ''))
+                      .map((exp: BudgetExpense) => (
+                        <tr key={exp.id}>
+                          <td>{(exp.date || '').slice(0, 10)}</td>
+                          <td>
+                            <span className="badge-category" style={{ backgroundColor: exp.category_color }}>
+                              {exp.category_icon} {exp.category_name}
+                            </span>
+                          </td>
+                          <td>{exp.concept}</td>
+                          <td>{exp.payment_method || '—'}</td>
+                          <td className="font-bold">{formatCurrency(exp.budget_amount)}</td>
+                          <td>{formatCurrency(exp.real_amount || 0)}</td>
+                          <td>
+                            <button
+                              onClick={() => openEditExpenseModal(exp)}
+                              className="btn-pastel btn-secondary-pastel"
+                              title="Editar"
+                            >
+                              <i className="fa-solid fa-pen"></i>
+                            </button>{' '}
+                            <button
+                              onClick={() => deleteBudgetExpense(exp.id!)}
+                              className="btn-pastel btn-delete-sm"
+                              title="Eliminar"
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    {(monthDetails.budgetExpenses || []).length === 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', opacity: 0.7 }}>
+                          Aún no hay gastos presupuestados este mes
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* GRID DEL CALENDARIO */}
+          {calendarView === 'grid' && (
           <div className="calendar-grid-wrapper">
             <div className="calendar-grid">
               <div className="day-name">Dom</div>
@@ -488,6 +628,7 @@ export const MonthLayoutPage: React.FC = () => {
               ))}
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -823,7 +964,7 @@ export const MonthLayoutPage: React.FC = () => {
         <div className="modal-overlay" onClick={() => setShowExpenseModal(false)}>
           <div className="modal-card card-pastel" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>🌸 Agregar Gasto Presupuestado</h3>
+              <h3>{editingExpenseId ? '✏️ Editar Gasto Presupuestado' : '🌸 Agregar Gasto Presupuestado'}</h3>
             </div>
             <div className="modal-body">
               <div className="form-group">
@@ -883,7 +1024,7 @@ export const MonthLayoutPage: React.FC = () => {
                 Cancelar
               </button>
               <button onClick={saveBudgetExpense} className="btn-pastel btn-primary-pastel">
-                Guardar Gasto
+                {editingExpenseId ? 'Guardar Cambios' : 'Guardar Gasto'}
               </button>
             </div>
           </div>
@@ -914,6 +1055,9 @@ export const MonthLayoutPage: React.FC = () => {
             <div className="modal-footer">
               <button onClick={() => deleteBudgetExpense(selectedExpense.id!)} className="btn-pastel btn-delete-sm">
                 Eliminar
+              </button>
+              <button onClick={() => openEditExpenseModal(selectedExpense)} className="btn-pastel btn-secondary-pastel">
+                <i className="fa-solid fa-pen"></i> Editar
               </button>
               <button onClick={() => setSelectedExpense(null)} className="btn-pastel btn-primary-pastel">
                 Cerrar
@@ -1012,6 +1156,13 @@ export const MonthLayoutPage: React.FC = () => {
         .data-table td:nth-child(2) { white-space: normal; } /* Concepto puede romper si es muy largo */
         .savings-card { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
         .savings-icon { font-size: 2.5rem; }
+        .view-toggle { display: inline-flex; gap: 6px; margin: 8px 0; }
+        .view-toggle-btn {
+          padding: 6px 14px; border-radius: 10px; border: 1.5px solid #F4A6C1;
+          background: #FFF0F4; color: #665275; font-weight: 600; cursor: pointer;
+          font-family: inherit; transition: all 0.2s ease;
+        }
+        .view-toggle-btn.active, .view-toggle-btn:hover { background: #D4566A; color: #fff; border-color: #D4566A; }
         .saving-input-group { display: flex; align-items: center; gap: 6px; width: 100%; }
         .currency-symbol { font-weight: 700; font-size: 1.1rem; }
         .totals-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 20px; }
