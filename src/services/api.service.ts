@@ -13,6 +13,7 @@ import {
   AnnualSummary,
   CategoryChartData,
   TodayShortcuts,
+  PendingBudgetExpense,
 } from '../types';
 
 export const ApiService = {
@@ -131,6 +132,12 @@ export const ApiService = {
   async deleteBudgetExpenseSeries(id: number): Promise<boolean> {
     const res = await api.delete<{ success: boolean }>(`/expenses/budget/${id}/series`);
     return res.data.success;
+  },
+
+  // GASTOS PRESUPUESTADOS PENDIENTES
+  async getPendingBudgetExpenses(): Promise<PendingBudgetExpense[]> {
+    const res = await api.get<{ success: boolean; data: PendingBudgetExpense[] }>('/expenses/pending');
+    return res.data.data;
   },
 
   // GASTOS EXTRA

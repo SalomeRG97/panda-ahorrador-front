@@ -1,12 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getAvatarUrl } from '../../config/environment';
+import { NotificationsModal, APP_NEWS_UPDATES } from './NotificationsModal';
+import { ApiService } from '../../services/api.service';
+import { PendingBudgetExpense } from '../../types';
 
 export const Navbar: React.FC = () => {
   const { currentUser, isAuthenticated, hasRole, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifModalOpen, setNotifModalOpen] = useState(false);
+  const [pendingExpenses, setPendingExpenses] = useState<PendingBudgetExpense[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+
+  const loadPendingExpenses = () => {
+    if (!isAuthenticated) return;
+    setLoadingPending(true);
+    ApiService.getPendingBudgetExpenses()
+      .then((data) => setPendingExpenses(data || []))
+      .catch((err) => console.error('Error al cargar gastos pendientes:', err))
+      .finally(() => setLoadingPending(false));
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadPendingExpenses();
+      const interval = setInterval(loadPendingExpenses, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
+
+  const getUnreadNewsCount = (): number => {
+    try {
+      const stored = localStorage.getItem('panda_read_news_ids_v1');
+      const readIds: string[] = stored ? JSON.parse(stored) : [];
+      return APP_NEWS_UPDATES.filter((n) => !readIds.includes(n.id)).length;
+    } catch {
+      return 0;
+    }
+  };
+
+  const unreadNewsCount = getUnreadNewsCount();
+  const pendingCount = pendingExpenses.length;
+  const totalBadgeCount = pendingCount + unreadNewsCount;
 
   const handleLogout = () => {
     setMobileMenuOpen(false);
@@ -30,16 +67,35 @@ export const Navbar: React.FC = () => {
           </div>
         </Link>
 
-        {/* Botón Menú Móvil / Hamburguesa */}
-        {isAuthenticated && (
-          <button
-            className="mobile-toggle-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Abrir menú"
-          >
-            <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
-          </button>
-        )}
+        {/* Acciones para Móvil */}
+        <div className="mobile-header-actions">
+          {isAuthenticated && (
+            <button
+              className="btn-notif-trigger mobile-notif"
+              onClick={() => setNotifModalOpen(true)}
+              title="Centro de Notificaciones"
+              aria-label="Notificaciones"
+            >
+              <i className="fa-solid fa-bell"></i>
+              {totalBadgeCount > 0 && (
+                <span className="notif-counter-badge">
+                  {totalBadgeCount > 99 ? '99+' : totalBadgeCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Botón Menú Móvil / Hamburguesa */}
+          {isAuthenticated && (
+            <button
+              className="mobile-toggle-btn"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Abrir menú"
+            >
+              <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
+            </button>
+          )}
+        </div>
 
         {/* Menú de Navegación Escritorio y Móvil */}
         {isAuthenticated ? (
@@ -67,6 +123,21 @@ export const Navbar: React.FC = () => {
 
             {/* Perfil del usuario autenticado */}
             <div className="user-profile-menu">
+              {/* Botón Notificaciones Desktop */}
+              <button
+                className="btn-notif-trigger desktop-notif"
+                onClick={() => setNotifModalOpen(true)}
+                title="Centro de Notificaciones"
+                aria-label="Notificaciones"
+              >
+                <i className="fa-solid fa-bell"></i>
+                {totalBadgeCount > 0 && (
+                  <span className="notif-counter-badge">
+                    {totalBadgeCount > 99 ? '99+' : totalBadgeCount}
+                  </span>
+                )}
+              </button>
+
               <Link to="/settings" className="user-info-link" title="Ir a Configuración" onClick={closeMobileMenu}>
                 <img src={getAvatarUrl(currentUser?.avatarUrl)} alt="User Avatar" className="user-avatar-img" />
                 <div className="user-details">
@@ -330,6 +401,77 @@ export const Navbar: React.FC = () => {
             background-color: #FFE5EC;
             border-radius: 12px;
           }
+          .desktop-notif { display: none !important; }
+          .mobile-notif { display: flex !important; }
+        }
+
+        .mobile-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .btn-notif-trigger {
+          position: relative;
+          background: #FFF0F4;
+          border: 1.5px solid #F4A6C1;
+          color: #D4566A;
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.05rem;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          flex-shrink: 0;
+        }
+
+        .btn-notif-trigger:hover {
+          background: #D4566A;
+          color: #FFFFFF;
+          border-color: #D4566A;
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(212, 86, 106, 0.25);
+        }
+
+        .btn-notif-trigger:hover i {
+          animation: ringBell 0.4s ease;
+        }
+
+        .mobile-notif {
+          display: none;
+        }
+
+        .desktop-notif {
+          display: flex;
+        }
+
+        .notif-counter-badge {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          background: #D4566A;
+          color: #FFFFFF;
+          font-size: 0.65rem;
+          font-weight: 800;
+          padding: 2px 5px;
+          border-radius: 10px;
+          border: 2px solid #FFFFFF;
+          min-width: 18px;
+          text-align: center;
+          line-height: 1;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        @keyframes ringBell {
+          0% { transform: rotate(0); }
+          20% { transform: rotate(15deg); }
+          40% { transform: rotate(-15deg); }
+          60% { transform: rotate(10deg); }
+          80% { transform: rotate(-5deg); }
+          100% { transform: rotate(0); }
         }
 
         @keyframes slideDown {
@@ -337,6 +479,15 @@ export const Navbar: React.FC = () => {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      {/* MODAL / DRAWER DE NOTIFICACIONES */}
+      <NotificationsModal
+        isOpen={notifModalOpen}
+        onClose={() => setNotifModalOpen(false)}
+        pendingExpenses={pendingExpenses}
+        loadingPending={loadingPending}
+        onRefreshPending={loadPendingExpenses}
+      />
     </header>
   );
 };

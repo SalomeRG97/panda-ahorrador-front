@@ -110,6 +110,41 @@ export interface BudgetExpense {
 
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
 
+export interface PendingBudgetExpense {
+  id: number;
+  month_id: number;
+  week_id: number | null;
+  week_number?: number | null;
+  category_id: number;
+  date: string;
+  concept: string;
+  budget_amount: number;
+  real_amount?: number;
+  payment_method?: string;
+  recurrence_id?: number | null;
+  recurrence_frequency?: RecurrenceFrequency | null;
+  year_id: number;
+  month_number: number;
+  month_name: string;
+  year: number;
+  category_name?: string;
+  category_color?: string;
+  category_icon?: string;
+}
+
+export interface UpdateNewsItem {
+  id: string;
+  version: string;
+  title: string;
+  date: string;
+  tag: string;
+  tagColor?: string;
+  icon: string;
+  headline: string;
+  description: string;
+  highlights?: string[];
+}
+
 export interface ExtraExpense {
   id?: number;
   month_id: number;
