@@ -131,6 +131,7 @@ export interface PendingBudgetExpense {
   category_name?: string;
   category_color?: string;
   category_icon?: string;
+  status_type?: 'overdue' | 'current_week';
 }
 
 export interface UpdateNewsItem {

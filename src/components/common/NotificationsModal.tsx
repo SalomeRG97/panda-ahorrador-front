@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiService } from '../../services/api.service';
 import { PendingBudgetExpense, UpdateNewsItem } from '../../types';
@@ -145,6 +145,7 @@ export const NotificationsModal: React.FC<Props> = ({
 }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'news' | 'pending'>('pending');
+  const [pendingFilter, setPendingFilter] = useState<'all' | 'overdue' | 'current_week'>('all');
   const [readNewsIds, setReadNewsIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_READ_NEWS);
@@ -159,6 +160,36 @@ export const NotificationsModal: React.FC<Props> = ({
       onRefreshPending();
     }
   }, [isOpen]);
+
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const isOverdue = (exp: PendingBudgetExpense) => {
+    if (exp.status_type) return exp.status_type === 'overdue';
+    return String(exp.date).slice(0, 10) < todayStr;
+  };
+
+  const overdueExpenses = useMemo(() => {
+    return pendingExpenses.filter(isOverdue);
+  }, [pendingExpenses, todayStr]);
+
+  const currentWeekExpenses = useMemo(() => {
+    return pendingExpenses.filter((e) => !isOverdue(e));
+  }, [pendingExpenses, todayStr]);
+
+  const totalPendingAmount = useMemo(() => {
+    return pendingExpenses.reduce((sum, e) => sum + (Number(e.budget_amount) || 0), 0);
+  }, [pendingExpenses]);
+
+  const totalOverdueAmount = useMemo(() => {
+    return overdueExpenses.reduce((sum, e) => sum + (Number(e.budget_amount) || 0), 0);
+  }, [overdueExpenses]);
+
+  const totalCurrentWeekAmount = useMemo(() => {
+    return currentWeekExpenses.reduce((sum, e) => sum + (Number(e.budget_amount) || 0), 0);
+  }, [currentWeekExpenses]);
 
   const markAllNewsAsRead = () => {
     const allIds = APP_NEWS_UPDATES.map((n) => n.id);
@@ -183,6 +214,58 @@ export const NotificationsModal: React.FC<Props> = ({
 
   const unreadNewsCount = APP_NEWS_UPDATES.filter((n) => !readNewsIds.includes(n.id)).length;
   const pendingCount = pendingExpenses.length;
+
+  const renderExpenseCard = (exp: PendingBudgetExpense, isPast: boolean) => (
+    <div
+      key={exp.id}
+      className={`pending-expense-card ${isPast ? 'card-overdue' : 'card-current'}`}
+      onClick={() => handleNavigateToExpense(exp)}
+      title="Clic para ir a la semana del gasto"
+    >
+      <div className="pending-card-left">
+        <div className="pending-top-row">
+          <div className="pending-cat-badge" style={{ backgroundColor: exp.category_color || '#F4A6C1' }}>
+            {exp.category_icon || '📦'} {exp.category_name}
+          </div>
+          {isPast ? (
+            <span className="pill-status-overdue">
+              <i className="fa-solid fa-triangle-exclamation"></i> Atrasado
+            </span>
+          ) : (
+            <span className="pill-status-current">
+              <i className="fa-solid fa-calendar-day"></i> Esta semana
+            </span>
+          )}
+        </div>
+        <div className="pending-concept">
+          <strong>{exp.recurrence_id ? '🔁 ' : ''}{exp.concept}</strong>
+        </div>
+        <div className="pending-meta">
+          <span>📅 {exp.date}</span>
+          {exp.week_number && (
+            <span className="pill-week">Semana {exp.week_number}</span>
+          )}
+          <span>• {exp.month_name} {exp.year}</span>
+          {exp.payment_method && (
+            <span className="pill-pm">💳 {exp.payment_method}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="pending-card-right">
+        <div className="pending-amount">
+          <span className="amount-label">Presupuestado:</span>
+          <strong className="amount-val">{formatCurrency(exp.budget_amount)}</strong>
+        </div>
+        <button
+          className={`btn-go-week ${isPast ? 'btn-go-overdue' : ''}`}
+          onClick={(e) => { e.stopPropagation(); handleNavigateToExpense(exp); }}
+        >
+          Ejecutar <i className="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <ModalPortal isOpen={isOpen}>
@@ -225,7 +308,7 @@ export const NotificationsModal: React.FC<Props> = ({
           <div className="notif-tab-content">
             <div className="notif-content-intro">
               <p>
-                Gastos presupuestados que aún no tienen registrado su monto real ejecutado. Haz clic en cualquiera para ir directamente a la semana correspondiente:
+                Gastos pendientes de ejecutar: atrasados y programados para esta semana. Haz clic en cualquiera para ir directamente a su semana:
               </p>
             </div>
 
@@ -237,48 +320,102 @@ export const NotificationsModal: React.FC<Props> = ({
               <div className="notif-empty-state">
                 <div className="empty-icon">🐼🎉</div>
                 <h4>¡Estás al día!</h4>
-                <p>No tienes ningún gasto presupuestado pendiente de ejecutar en este momento.</p>
+                <p>No tienes ningún gasto atrasado ni pendiente de ejecutar para esta semana.</p>
               </div>
             ) : (
-              <div className="pending-expenses-list">
-                {pendingExpenses.map((exp) => (
-                  <div
-                    key={exp.id}
-                    className="pending-expense-card"
-                    onClick={() => handleNavigateToExpense(exp)}
-                    title="Clic para ir a la semana del gasto"
+              <>
+                {/* DASHBOARD MINI RESUMEN */}
+                <div className="pending-dashboard-grid">
+                  <div className="pending-stat-card stat-total">
+                    <span className="stat-label">Total por Ejecutar</span>
+                    <strong className="stat-value">{formatCurrency(totalPendingAmount)}</strong>
+                    <span className="stat-sub">{pendingExpenses.length} {pendingExpenses.length === 1 ? 'gasto' : 'gastos'}</span>
+                  </div>
+                  <div className="pending-stat-card stat-overdue">
+                    <span className="stat-label">⚠️ Atrasados</span>
+                    <strong className="stat-value">{overdueExpenses.length}</strong>
+                    <span className="stat-sub">{formatCurrency(totalOverdueAmount)}</span>
+                  </div>
+                  <div className="pending-stat-card stat-current">
+                    <span className="stat-label">📅 Esta Semana</span>
+                    <strong className="stat-value">{currentWeekExpenses.length}</strong>
+                    <span className="stat-sub">{formatCurrency(totalCurrentWeekAmount)}</span>
+                  </div>
+                </div>
+
+                {/* FILTROS RÁPIDOS */}
+                <div className="pending-filter-tabs">
+                  <button
+                    type="button"
+                    className={`pending-filter-btn ${pendingFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setPendingFilter('all')}
                   >
-                    <div className="pending-card-left">
-                      <div className="pending-cat-badge" style={{ backgroundColor: exp.category_color || '#F4A6C1' }}>
-                        {exp.category_icon || '📦'} {exp.category_name}
+                    Todos ({pendingExpenses.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`pending-filter-btn btn-chip-overdue ${pendingFilter === 'overdue' ? 'active' : ''}`}
+                    onClick={() => setPendingFilter('overdue')}
+                  >
+                    ⚠️ Atrasados ({overdueExpenses.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`pending-filter-btn btn-chip-current ${pendingFilter === 'current_week' ? 'active' : ''}`}
+                    onClick={() => setPendingFilter('current_week')}
+                  >
+                    📅 Esta Semana ({currentWeekExpenses.length})
+                  </button>
+                </div>
+
+                {/* LISTA SECCIÓN 1: GASTOS ATRASADOS */}
+                {(pendingFilter === 'all' || pendingFilter === 'overdue') && (
+                  <div className="pending-group-section">
+                    <div className="pending-group-title group-overdue">
+                      <div className="title-left">
+                        <i className="fa-solid fa-triangle-exclamation"></i>
+                        <span>Gastos Atrasados</span>
+                        <span className="badge-count-group count-overdue">{overdueExpenses.length}</span>
                       </div>
-                      <div className="pending-concept">
-                        <strong>{exp.recurrence_id ? '🔁 ' : ''}{exp.concept}</strong>
-                      </div>
-                      <div className="pending-meta">
-                        <span>📅 {exp.date}</span>
-                        {exp.week_number && (
-                          <span className="pill-week">Semana {exp.week_number}</span>
-                        )}
-                        <span>• {exp.month_name} {exp.year}</span>
-                        {exp.payment_method && (
-                          <span className="pill-pm">💳 {exp.payment_method}</span>
-                        )}
-                      </div>
+                      <span className="title-desc">Fechas anteriores pendientes</span>
                     </div>
 
-                    <div className="pending-card-right">
-                      <div className="pending-amount">
-                        <span className="amount-label">Presupuestado:</span>
-                        <strong className="amount-val">{formatCurrency(exp.budget_amount)}</strong>
+                    {overdueExpenses.length === 0 ? (
+                      <div className="pending-empty-filter">
+                        <i className="fa-solid fa-circle-check"></i> ¡Excelente! No tienes gastos atrasados.
                       </div>
-                      <button className="btn-go-week" onClick={(e) => { e.stopPropagation(); handleNavigateToExpense(exp); }}>
-                        Ejecutar <i className="fa-solid fa-chevron-right"></i>
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="pending-expenses-list">
+                        {overdueExpenses.map((exp) => renderExpenseCard(exp, true))}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+                )}
+
+                {/* LISTA SECCIÓN 2: GASTOS DE ESTA SEMANA */}
+                {(pendingFilter === 'all' || pendingFilter === 'current_week') && (
+                  <div className="pending-group-section">
+                    <div className="pending-group-title group-current">
+                      <div className="title-left">
+                        <i className="fa-solid fa-calendar-week"></i>
+                        <span>Gastos de Esta Semana</span>
+                        <span className="badge-count-group count-current">{currentWeekExpenses.length}</span>
+                      </div>
+                      <span className="title-desc">Semana en curso</span>
+                    </div>
+
+                    {currentWeekExpenses.length === 0 ? (
+                      <div className="pending-empty-filter">
+                        <i className="fa-solid fa-circle-check"></i> No hay más gastos presupuestados para esta semana.
+                      </div>
+                    ) : (
+                      <div className="pending-expenses-list">
+                        {currentWeekExpenses.map((exp) => renderExpenseCard(exp, false))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -504,6 +641,152 @@ export const NotificationsModal: React.FC<Props> = ({
         .notif-empty-state h4 { margin: 0 0 6px; color: #4A3F55; font-size: 1.15rem; }
         .notif-empty-state p { margin: 0; color: #7A6882; font-size: 0.88rem; }
 
+        /* DASHBOARD RESUMEN DE PENDIENTES */
+        .pending-dashboard-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .pending-stat-card {
+          padding: 10px 12px;
+          border-radius: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          border: 1px solid transparent;
+        }
+        .stat-total {
+          background: #FFF0F4;
+          border-color: #F4A6C1;
+        }
+        .stat-total .stat-value { color: #D4566A; }
+        .stat-overdue {
+          background: #FFF4F2;
+          border-color: #F8B4A6;
+        }
+        .stat-overdue .stat-value { color: #C53030; }
+        .stat-current {
+          background: #F8F5FE;
+          border-color: #DDD6FE;
+        }
+        .stat-current .stat-value { color: #6D28D9; }
+        .stat-label {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #7A6882;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+        .stat-value {
+          font-size: 1.1rem;
+          font-weight: 800;
+          line-height: 1.2;
+        }
+        .stat-sub {
+          font-size: 0.72rem;
+          color: #8C7B99;
+          font-weight: 600;
+        }
+
+        /* FILTROS PENDIENTES */
+        .pending-filter-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 14px;
+          flex-wrap: wrap;
+        }
+        .pending-filter-btn {
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1.5px solid #F4A6C1;
+          background: #FFFFFF;
+          color: #665275;
+          font-family: inherit;
+          font-size: 0.78rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .pending-filter-btn:hover {
+          background: #FFF0F4;
+          color: #D4566A;
+        }
+        .pending-filter-btn.active {
+          background: #D4566A;
+          color: #FFFFFF;
+          border-color: #D4566A;
+        }
+        .pending-filter-btn.btn-chip-overdue.active {
+          background: #C53030;
+          border-color: #C53030;
+        }
+        .pending-filter-btn.btn-chip-current.active {
+          background: #6D28D9;
+          border-color: #6D28D9;
+        }
+
+        /* SECCIONES AGRUPADAS */
+        .pending-group-section {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-bottom: 18px;
+        }
+        .pending-group-title {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          border-radius: 10px;
+          font-size: 0.84rem;
+          font-weight: 700;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .pending-group-title.group-overdue {
+          background: #FEECEB;
+          color: #9B2C2C;
+          border-left: 4px solid #C53030;
+        }
+        .pending-group-title.group-current {
+          background: #F3EEFE;
+          color: #5B21B6;
+          border-left: 4px solid #6D28D9;
+        }
+        .title-left {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .title-desc {
+          font-size: 0.72rem;
+          font-weight: 600;
+          opacity: 0.85;
+        }
+        .badge-count-group {
+          font-size: 0.72rem;
+          padding: 2px 7px;
+          border-radius: 10px;
+          font-weight: 800;
+          color: #FFFFFF;
+        }
+        .count-overdue { background: #C53030; }
+        .count-current { background: #6D28D9; }
+
+        .pending-empty-filter {
+          padding: 14px 16px;
+          background: #F0FDF4;
+          border: 1px dashed #86EFAC;
+          color: #166534;
+          border-radius: 12px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
         .pending-expenses-list {
           display: flex;
           flex-direction: column;
@@ -522,10 +805,61 @@ export const NotificationsModal: React.FC<Props> = ({
           cursor: pointer;
           transition: all 0.22s ease;
         }
+        .pending-expense-card.card-overdue {
+          border-left: 4px solid #D4566A;
+          background: #FFFBFC;
+        }
+        .pending-expense-card.card-current {
+          border-left: 4px solid #8B5CF6;
+        }
         .pending-expense-card:hover {
           border-color: #D4566A;
           transform: translateY(-2px);
           box-shadow: 0 4px 14px rgba(212, 86, 106, 0.12);
+        }
+
+        .pending-top-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .pill-status-overdue {
+          background: #FEECEB;
+          color: #C53030;
+          border: 1px solid #FCA5A5;
+          font-size: 0.7rem;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 6px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .pill-status-current {
+          background: #F3EEFE;
+          color: #6D28D9;
+          border: 1px solid #DDD6FE;
+          font-size: 0.7rem;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 6px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .btn-go-overdue {
+          background: #FFF1F0 !important;
+          color: #C53030 !important;
+          border-color: #FCA5A5 !important;
+        }
+        .btn-go-overdue:hover {
+          background: #C53030 !important;
+          color: #FFFFFF !important;
+          border-color: #C53030 !important;
         }
 
         .pending-card-left {
@@ -803,6 +1137,17 @@ export const NotificationsModal: React.FC<Props> = ({
           }
           .notif-tab-content {
             padding: 12px 14px;
+          }
+          .pending-dashboard-grid {
+            grid-template-columns: 1fr;
+            gap: 6px;
+          }
+          .pending-filter-tabs {
+            gap: 6px;
+          }
+          .pending-filter-btn {
+            font-size: 0.74rem;
+            padding: 5px 10px;
           }
           .pending-expense-card {
             flex-direction: column;
